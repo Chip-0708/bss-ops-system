@@ -1,0 +1,34 @@
+# Go
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.txt
+
+# 前端
+node_modules/
+dist/
+.webpack/
+*.local
+
+# 环境变量与密钥
+.env
+.env.*
+configs/config.yaml
+!.env.example
+*.pem
+*.key
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 日志与临时
+logs/
+*.log
+tmp/

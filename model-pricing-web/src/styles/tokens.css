@@ -1,0 +1,44 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-synthesis: none;
+  --app-bg: #f3f6fa;
+  --app-surface: #ffffff;
+  --app-surface-muted: #f7f9fc;
+  --app-border: #e3e9f1;
+  --app-text-primary: #24324a;
+  --app-text-secondary: #56657a;
+  --app-text-muted: #79869a;
+  --app-hover-bg: #edf1ff;
+  --app-accent: #5266df;
+  --app-accent-contrast: #ffffff;
+  --app-success: #299f81;
+  --app-warning: #c48724;
+  --app-danger: #d65362;
+  --app-sidebar-width: 244px;
+  --surface: var(--app-surface);
+  --background: var(--app-bg);
+  --text: var(--app-text-primary);
+  --muted: var(--app-text-muted);
+  --line: var(--app-border);
+  --soft: var(--app-surface-muted);
+  --accent: var(--app-accent);
+}
+
+html.dark {
+  color-scheme: dark;
+  --app-bg: #101721;
+  --app-surface: #18212e;
+  --app-surface-muted: #1e2938;
+  --app-border: #334155;
+  --app-text-primary: #e5ebf4;
+  --app-text-secondary: #bdc9d9;
+  --app-text-muted: #92a1b7;
+  --app-hover-bg: #26324a;
+  --app-accent: #9daaff;
+  --app-accent-contrast: #111827;
+  --app-success: #5bc4a8;
+  --app-warning: #e8b35b;
+  --app-danger: #f07b88;
+}
+

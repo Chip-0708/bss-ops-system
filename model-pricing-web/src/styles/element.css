@@ -1,0 +1,14 @@
+:root {
+  --el-color-primary: var(--app-accent);
+  --el-border-radius-base: 8px;
+}
+
+html.dark {
+  --el-bg-color: var(--app-surface);
+  --el-bg-color-overlay: #1c2736;
+  --el-fill-color-blank: var(--app-surface);
+  --el-border-color: var(--app-border);
+  --el-text-color-primary: var(--app-text-primary);
+  --el-text-color-regular: var(--app-text-secondary);
+}
+

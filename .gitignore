@@ -1,0 +1,13 @@
+# Frontend build / release artifacts
+node_modules/
+dist/
+*.zip
+
+# Local environment/config
+.env
+.env.local
+.env.development
+config.yaml
+
+# Logs
+*.log

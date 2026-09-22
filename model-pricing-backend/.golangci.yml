@@ -1,0 +1,49 @@
+# golangci-lint v2 配置（v2.13.2）
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: standard
+  enable:
+    - bodyclose
+    - errorlint
+    - misspell
+    - prealloc
+    - revive
+    - rowserrcheck
+    - sqlclosecheck
+    - unconvert
+    - whitespace
+  settings:
+    revive:
+      rules:
+        - name: exported
+        - name: error-strings
+        - name: indent-error-flow
+        - name: unreachable-code
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - rowserrcheck
+      - path: migrations/
+        linters:
+          - revive
+      - path: internal/api/swagger_models\.go
+        linters:
+          - revive
+          - gofmt
+          - goimports
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

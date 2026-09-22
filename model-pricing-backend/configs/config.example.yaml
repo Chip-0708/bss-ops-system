@@ -1,0 +1,49 @@
+# 配置文件模板：复制为 config.yaml 后按本机环境修改
+# cp configs/config.example.yaml configs/config.yaml
+
+server:
+  host: 0.0.0.0
+  port: 8080
+  mode: release        # debug | release
+  timeout: 30s
+  allow_origins:
+    - http://localhost:5173
+    - http://localhost:3000
+
+db:
+  host: 127.0.0.1
+  port: 5433
+  user: app
+  password: ""
+  dbname: model_bss
+  sslmode: disable
+  timezone: Asia/Shanghai
+  max_open: 30
+  max_idle: 5
+  max_lifetime: 1h
+  slow_threshold: 200ms
+
+# Redis 仅用于短信验证码 + 登录失败限流；enable=false 时降级为进程内缓存
+redis:
+  enable: false
+  addr: 127.0.0.1:6379
+  password: ""
+  db: 0
+
+auth:
+  token_secret: please_change_me
+  access_ttl: 8h
+  refresh_ttl: 168h
+  max_login_fail: 5
+  lock_duration: 15m
+
+log:
+  level: info
+  format: json        # console | json
+  file: logs/app.log
+
+# 在线接口调试页（Swagger UI）：GET /swagger/index.html
+# 默认开启（见 internal/infra/config/env.go 的 SetDefault），这里显式写出来便于生产关闭。
+#  production 建议 false —— 该页会列出全部接口与参数，属内部调试资产。
+docs:
+  enable: true

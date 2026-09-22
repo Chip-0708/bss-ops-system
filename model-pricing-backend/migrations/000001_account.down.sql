@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS role_mutex;
+DROP TABLE IF EXISTS role_grant;
+DROP TABLE IF EXISTS role_permission;
+DROP TABLE IF EXISTS permission_point;
+DROP TABLE IF EXISTS role;
+DROP TABLE IF EXISTS login_session;
+DROP TABLE IF EXISTS account;
+DROP TABLE IF EXISTS internal_staff;
+DROP TABLE IF EXISTS org_unit;

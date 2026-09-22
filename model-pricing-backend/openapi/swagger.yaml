@@ -1,0 +1,3554 @@
+basePath: /
+definitions:
+  api.APIResponse:
+    properties:
+      code:
+        description: 业务错误码，0=成功
+        example: 0
+        type: integer
+      data:
+        description: 业务数据
+        type: object
+      message:
+        description: 错误消息，成功时 "ok"
+        example: ok
+        type: string
+      requestId:
+        description: 请求追踪号（X-Request-Id）
+        example: 01929d81-...
+        format: uuid
+        type: string
+    type: object
+  api.decideBody:
+    properties:
+      decision:
+        type: string
+      override_price:
+        type: string
+      reason:
+        type: string
+    required:
+    - decision
+    type: object
+  api.generateDraftBody:
+    properties:
+      currency:
+        type: string
+      level_code:
+        type: string
+      policy_ids:
+        items:
+          type: integer
+        type: array
+      sku_ids:
+        items:
+          type: integer
+        type: array
+    required:
+    - currency
+    - level_code
+    type: object
+  api.generateQuoteBody:
+    properties:
+      customer_id:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/api.quoteItemBody'
+        type: array
+      quote_type:
+        type: string
+      source_quote_id:
+        type: integer
+      valid_to:
+        type: string
+    required:
+    - customer_id
+    - quote_type
+    type: object
+  api.lockPrimaryBody:
+    properties:
+      reason:
+        type: string
+      supplier_id:
+        type: integer
+    type: object
+  api.publishBody:
+    properties:
+      effective_time:
+        type: string
+      gray_percent:
+        type: integer
+      mode:
+        type: string
+    required:
+    - effective_time
+    - mode
+    type: object
+  api.quoteItemBody:
+    properties:
+      sku_id:
+        type: integer
+      unit_price:
+        type: string
+    required:
+    - sku_id
+    type: object
+  api.refreshBody:
+    properties:
+      reason:
+        type: string
+    type: object
+  api.rollbackBody:
+    properties:
+      reason:
+        type: string
+      target_version_no:
+        type: integer
+    required:
+    - reason
+    - target_version_no
+    type: object
+  api.specialPriceBody:
+    properties:
+      expected_margin:
+        type: string
+      reason:
+        type: string
+    required:
+    - expected_margin
+    - reason
+    type: object
+  api.transferBody:
+    properties:
+      confirm:
+        type: boolean
+      reason:
+        type: string
+      to_operator_id:
+        type: integer
+    required:
+    - to_operator_id
+    type: object
+  api.upsertPolicyBody:
+    properties:
+      code:
+        type: string
+      level_code:
+        type: string
+      name:
+        type: string
+      param_value:
+        type: string
+      price_method:
+        type: string
+      priority:
+        type: integer
+      scope_id:
+        type: integer
+      scope_type:
+        type: string
+      status:
+        type: string
+    required:
+    - code
+    - name
+    - param_value
+    - price_method
+    - scope_type
+    - status
+    type: object
+  auth.LoginRequest:
+    properties:
+      login_id:
+        type: string
+      password:
+        type: string
+    type: object
+  cost.OverrideItem:
+    properties:
+      channel_rate:
+        type: string
+      loss_rate:
+        type: string
+      scope_id:
+        type: integer
+      scope_type:
+        type: string
+      tax_inclusive:
+        type: boolean
+      withholding_tax:
+        type: string
+    type: object
+  cost.ParamViewCost:
+    properties:
+      channel_rate:
+        type: string
+      loss_rate:
+        type: string
+      tax_inclusive:
+        type: boolean
+      withholding_tax:
+        type: string
+    type: object
+  cost.PutParamsInput:
+    properties:
+      defaults:
+        allOf:
+        - $ref: '#/definitions/cost.ParamViewCost'
+        description: 6d-2 只读：非 nil → 400
+      overrides:
+        items:
+          $ref: '#/definitions/cost.OverrideItem'
+        type: array
+    type: object
+  model.AliasInput:
+    properties:
+      aliases:
+        items:
+          type: string
+        type: array
+      source:
+        type: string
+    required:
+    - aliases
+    type: object
+  model.BatchInput:
+    properties:
+      action:
+        type: string
+      payload:
+        additionalProperties: true
+        type: object
+      sku_ids:
+        items:
+          type: integer
+        minItems: 1
+        type: array
+    required:
+    - action
+    - sku_ids
+    type: object
+  model.CreateSKUInput:
+    properties:
+      aliases:
+        items:
+          type: string
+        type: array
+      capability:
+        additionalProperties: true
+        type: object
+      context_window:
+        type: integer
+      cross_border:
+        type: boolean
+      family_id:
+        type: integer
+      is_sensitive:
+        type: boolean
+      model_type:
+        type: string
+      native_currency:
+        type: string
+      sku_code:
+        maxLength: 128
+        minLength: 1
+        type: string
+      tier_tag:
+        type: string
+      vendor_id:
+        type: integer
+    required:
+    - family_id
+    - model_type
+    - native_currency
+    - sku_code
+    - vendor_id
+    type: object
+  model.DecisionInput:
+    properties:
+      comment:
+        maxLength: 512
+        type: string
+      decision:
+        enum:
+        - APPROVED
+        - REJECTED
+        type: string
+      step_no:
+        type: integer
+    required:
+    - decision
+    - step_no
+    type: object
+  model.DeprecateInput:
+    properties:
+      impact_snapshot_id:
+        type: string
+      reason:
+        maxLength: 500
+        minLength: 1
+        type: string
+      replacement_sku_id:
+        type: integer
+      sunset_date:
+        type: string
+    required:
+    - impact_snapshot_id
+    - reason
+    - sunset_date
+    type: object
+  model.MergeInput:
+    properties:
+      alias:
+        maxLength: 128
+        minLength: 1
+        type: string
+      source_sku_id:
+        type: integer
+      target_sku_id:
+        type: integer
+    required:
+    - alias
+    - source_sku_id
+    - target_sku_id
+    type: object
+  model.UpdateSKUInput:
+    properties:
+      aliases:
+        items:
+          type: string
+        type: array
+      capability:
+        additionalProperties: true
+        type: object
+      context_window:
+        type: integer
+      cross_border:
+        type: boolean
+      is_sensitive:
+        type: boolean
+      model_type:
+        type: string
+      native_currency:
+        type: string
+      sku_code:
+        type: string
+      tier_tag:
+        type: string
+    type: object
+  price.ConfirmInput:
+    properties:
+      effective_time:
+        description: RFC3339，只允许 ≤now
+        type: string
+      staging_ids:
+        items:
+          type: integer
+        type: array
+      sync_job_id:
+        type: integer
+    required:
+    - effective_time
+    - staging_ids
+    - sync_job_id
+    type: object
+  price.CreateJobInput:
+    properties:
+      job_type:
+        type: string
+      sku_ids:
+        items:
+          type: integer
+        type: array
+      source:
+        type: string
+    type: object
+  price.CreateStagingInput:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/price.StagingItemInput'
+        type: array
+      sync_job_id:
+        type: integer
+    type: object
+  price.StagingItemInput:
+    properties:
+      currency:
+        type: string
+      payload:
+        additionalProperties: {}
+        type: object
+      raw_sku_code:
+        type: string
+      sku_id:
+        type: integer
+    type: object
+  supplier.ConfirmRemoveInput:
+    properties:
+      confirm:
+        type: boolean
+      reason:
+        type: string
+    type: object
+  supplier.RejectInput:
+    properties:
+      reason:
+        type: string
+    required:
+    - reason
+    type: object
+  supplier.RetroEffectiveInput:
+    properties:
+      audit_reason:
+        type: string
+      effective_time:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/supplier.SubmitQuoteItem'
+        type: array
+      supplier_id:
+        type: integer
+      valid_to:
+        type: string
+    required:
+    - audit_reason
+    - effective_time
+    - items
+    - supplier_id
+    - valid_to
+    type: object
+  supplier.SubmitQuoteComponent:
+    properties:
+      component_type:
+        type: string
+      multiplier:
+        type: string
+      unit_price:
+        type: string
+    required:
+    - component_type
+    - unit_price
+    type: object
+  supplier.SubmitQuoteInput:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/supplier.SubmitQuoteItem'
+        type: array
+      remark:
+        type: string
+      valid_from:
+        type: string
+      valid_to:
+        type: string
+    required:
+    - items
+    - valid_from
+    - valid_to
+    type: object
+  supplier.SubmitQuoteItem:
+    properties:
+      components:
+        items:
+          $ref: '#/definitions/supplier.SubmitQuoteComponent'
+        type: array
+      constraints:
+        additionalProperties: {}
+        type: object
+      fx_tier:
+        type: string
+      sku_id:
+        type: integer
+    required:
+    - components
+    - sku_id
+    type: object
+  workbench.AlertActionInput:
+    properties:
+      action:
+        enum:
+        - HANDLE
+        - RESOLVE
+        - IGNORE
+        - TO_TICKET
+        type: string
+      alert_id:
+        type: integer
+      create_todo:
+        type: boolean
+      note:
+        type: string
+    required:
+    - action
+    - alert_id
+    type: object
+info:
+  contact:
+    name: 后端
+  description: |-
+    大模型中转平台：模型数据中心 + 进货/出货两条定价线。统一响应包 {code,message,data,requestId}；金额一律字符串传输；时间 ISO 8601 带时区。
+    错误码：400 参数校验、401 未认证、403 无权限、409 幂等/状态冲突、423 主体冻结、429 限流。
+    写操作（产生业务新版本/影响资金合同）必须携带 Idempotency-Key 头。
+    分页：?page=1&size=20 或 ?cursor=&size=，统一返回 {list,total,page,size}。
+  title: 模型管理与定价中心 API
+  version: "0.1"
+paths:
+  /api/customer/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: 账号密码登录。成功返回 token（明文仅在响应中出现一次，服务端只存 sha256）与权限包快照 role_snapshot。连续失败
+        5 次锁定 15 分钟（429）；主体冻结返回 423。
+      parameters:
+      - description: 登录参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={token, snapshot}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数校验失败
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 账号或密码错误
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "423":
+          description: code=10006 主体已冻结
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "429":
+          description: code=10007 失败次数超限，锁定 15 分钟
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: 登录（三门户共用，portal 由路由前缀决定）
+      tags:
+      - 认证
+  /api/customer/auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: 按 Authorization 头中的 Bearer token 吊销会话（revoked=true）。成功返回 204 无响应体。
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: 会话已吊销
+        "401":
+          description: code=10002 未携带或非法 token
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 登出（吊销当前会话）
+      tags:
+      - 认证
+  /api/customer/billing:
+    get:
+      description: 从 customer_profile 读 credit_limit / credit_used / deposit_amount
+        / deposit_status / billing_cycle。账单明细 bills=[] 占位（9c-① 遗留：待计费系统接入）。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data=PortalBillingView{credit_limit, credit_used, deposit_amount,
+            deposit_status, billing_cycle, bills}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 客户不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 余额 / 授信占用 / 押金状态
+      tags:
+      - 客户门户
+  /api/customer/home:
+    get:
+      description: balance（与 /billing 同源）+ pending_count（DRAFT/PENDING 报价数）+ unread_notifications
+        + common_models（本等级生效价目表的 SKU 列表，**不含价格明细以外的成本/毛利字段**）。本批单接口聚合，9c-④ 登记是否拆分为并行请求。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data=PortalHomeView{balance, pending_count, unread_notifications,
+            common_models}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 客户不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: H5 首页聚合：余额 + 待处理 + 未读通知 + 常用模型
+      tags:
+      - 客户门户
+  /api/customer/notifications:
+    get:
+      description: 当前客户的通知（created_at DESC 分页）。标记已读接口 POST /notifications/{id}/read
+        登记 9c-② 遗留。
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data=PortalNotificationListResult{list, total, page,
+            size}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 通知列表
+      tags:
+      - 客户门户
+  /api/customer/price-book:
+    get:
+      description: 按当前登录客户的 level_code 返回当前 EFFECTIVE 价目表（联 model_sku + 代表组件 unit_price）。**不含
+        floor_price / unit_cost / margin / baseline**。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data=PortalPriceBookView{level_code, version_no, currency,
+            items[]}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 当前等级暂无生效价目表 / 客户不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 当前生效价目表（本等级，分币种）
+      tags:
+      - 客户门户
+  /api/customer/quotes:
+    get:
+      description: 返回当前客户的 customer_quote（按 id DESC 分页）+ customer_price_book（合同价，SourceKind=CONTRACT）联合列表。只含自己的报价（行级过滤）。
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data=PortalQuoteListResult{list, total, page, size}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 我的报价与合同
+      tags:
+      - 客户门户
+  /api/customer/quotes/{id}/accept:
+    post:
+      consumes:
+      - application/json
+      description: 报价必须是 APPROVED 状态（或 special_price_status='APPROVED' 的特价单）且未过 valid_until；行级过滤
+        customer_id=登录客户。单事务：customer_quote.status→EFFECTIVE + INSERT customer_price_book
+        + audit CUSTOMER_QUOTE_ACCEPTED。
+      parameters:
+      - description: customer_quote.id
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 幂等键
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data=PortalAcceptResult{quote_id, new_status, contract_cnt}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 报价不存在（或不是自己的报价）
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 报价非 APPROVED / 报价已过期
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 接受报价 → 转合同价（幂等）
+      tags:
+      - 客户门户
+  /api/internal/approvals/{id}/decision:
+    post:
+      consumes:
+      - application/json
+      description: 角色匹配 required_role；同一操作员不得完成同一单的两个步骤；两步 APPROVED → SKU 转 DEPRECATING。
+      parameters:
+      - description: change_request ID
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 幂等键
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: 审批参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.DecisionInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={change_request_id,step_no,decision,final_status}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法 / 自审
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 角色不匹配
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 审批单不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 并发冲突
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 审批动作
+      tags:
+      - 模型管理
+  /api/internal/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: 账号密码登录。成功返回 token（明文仅在响应中出现一次，服务端只存 sha256）与权限包快照 role_snapshot。连续失败
+        5 次锁定 15 分钟（429）；主体冻结返回 423。
+      parameters:
+      - description: 登录参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={token, snapshot}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数校验失败
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 账号或密码错误
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "423":
+          description: code=10006 主体已冻结
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "429":
+          description: code=10007 失败次数超限，锁定 15 分钟
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: 登录（三门户共用，portal 由路由前缀决定）
+      tags:
+      - 认证
+  /api/internal/auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: 按 Authorization 头中的 Bearer token 吊销会话（revoked=true）。成功返回 204 无响应体。
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: 会话已吊销
+        "401":
+          description: code=10002 未携带或非法 token
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 登出（吊销当前会话）
+      tags:
+      - 认证
+  /api/internal/cost/baselines:
+    get:
+      description: 每行 = 某 SKU 的当前成本基线版本。unit_cost 为代表组件完全成本（input 优先，否则组件字母序）；unit_cost_basis
+        标注该组件；floor_price = unit_cost/(1−min_gross_margin)，读 sys_config 失败时该批为 null（读路径降级）。supplier_count
+        为当前 EFFECTIVE 报价的去重供应商数，single_point=(count==1)。按 field_mask 剔除敏感键：SALES 剔
+        unit_cost/unit_cost_basis/supplier_cost/calc_snapshot，SUPPLIER 另剔 floor_price；buyer（PROCUREMENT）可见全字段。
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页（上限 100）
+        in: query
+        name: size
+        type: integer
+      - description: sku_code 模糊匹配（大小写不敏感）
+        in: query
+        name: keyword
+        type: string
+      - description: 只返回 single_point=true 的行
+        in: query
+        name: only_single_point
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={list,total,page,size}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M5:V
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 成本基线列表（当前版本，M5:V，无归属过滤）
+      tags:
+      - 成本管理
+  /api/internal/cost/baselines/{sku}/compare:
+    get:
+      description: 对当前 EFFECTIVE 报价**实时计算**（不走 calc_snapshot——快照受任务消费延迟影响最多 1 分钟，且
+        scores 里无 constraints/逐组件成本）。suppliers[] 含逐组件完全成本、constraints 原始值、四因子得分、is_primary/is_backup；range
+        实时算（cost_weighted 按四因子 total 加权，Σtotal=0 退化为算术平均）；trend 按天聚合取每日最新版本（Asia/Shanghai
+        日历日），不插值；market_best = 参与供应商中完全成本最低值。days 容错规整：<=0→90，>365→365。
+      parameters:
+      - description: sku_id（纯数字）或 sku_code
+        in: path
+        name: sku
+        required: true
+        type: string
+      - default: 90
+        description: 趋势窗口天数（默认 90，上限 365）
+        in: query
+        name: days
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={sku_id,sku_code,currency,suppliers,range,trend,market_best,market_best_basis}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M5:V
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 SKU 不存在或当前无 EFFECTIVE 报价
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 多供应商比价 + 成本区间 + 趋势（M5:V）
+      tags:
+      - 成本管理
+  /api/internal/cost/baselines/{sku}/history:
+    get:
+      description: asOf 为空 = 全量时间线（version DESC，返回 version / valid_from / valid_to
+        / change_reason / primary_supplier_id / primary_supplier_name / unit_cost
+        / unit_cost_basis / calc_snapshot）；asOf 非空 = 该时刻生效的那一个版本（valid_from<=asOf
+        AND (valid_to IS NULL OR valid_to>asOf)，查不到返回 200+空 list）。{sku} 纯数字按 id，否则按
+        sku_code；都匹配不到 → 404。calc_snapshot 整体返回（含 formula_version/params/scores/excluded_suppliers），SUPPLIER
+        角色整块剔除。
+      parameters:
+      - description: sku_id（纯数字）或 sku_code
+        in: path
+        name: sku
+        required: true
+        type: string
+      - description: RFC3339 时刻（如 2026-08-01T00:00:00+08:00）
+        in: query
+        name: asOf
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={list:[…]}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 asOf 非法
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M5:V
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 SKU 不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 成本版本历史（M5:V，{sku} 为 sku_id 或 sku_code）
+      tags:
+      - 成本管理
+  /api/internal/cost/baselines/{sku}/lock-primary:
+    post:
+      consumes:
+      - application/json
+      description: 覆盖四因子算法结论，新版本 change_reason=MANUAL_LOCK、locked_manual=true。锁定是单向
+        sticky：后续任何触发（QUOTE_EFFECTIVE/PARAM_CHANGE/EXPIRE_REMOVE 等）都维持该锁定；若被锁供应商失效（冻结/该
+        SKU 无 EFFECTIVE 报价），后续重算明确报错、绝不自动降级或自动解锁。重复锁定同一家供应商 = 合法 no-op（不产新版本、不重复写审计）。本批不含解锁接口（见
+        CLAUDE.md 遗留 6d-3-①）。
+      parameters:
+      - description: sku_id（纯数字）或 sku_code
+        in: path
+        name: sku
+        required: true
+        type: string
+      - description: 锁定请求（supplier_id 必填，reason 必填）
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.lockPrimaryBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={sku_id,version,primary_supplier_id,change_reason,locked:true,unchanged}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法（reason 空白/supplier_id<=0/sku 段为空）
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M5:E（中间件）或角色不含 PROCUREMENT（服务层）
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 SKU 或 supplier 不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 该供应商在此 SKU 上无 EFFECTIVE 报价，或供应商处于冻结/失效状态
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 手动锁定主供应商（M5:E + 服务层角色收敛：仅 PROCUREMENT）
+      tags:
+      - 成本管理
+  /api/internal/cost/opportunities:
+    get:
+      description: type=bargain：主供应商价格显著高于市场最低价的清单（阈值 quote_anomaly_mkt，默认 0.30，严格大于才入选；deviation=(primary−market_best)/market_best）。type=single_point：只有
+        1 家有效报价的已上架 SKU（复用 §2 列表的 single_point 语义，不另写查询）。type 缺失或非法 → 400。list 永远是非
+        null 数组（空清单是合法事实，前端按 [] 渲染）。
+      parameters:
+      - description: bargain | single_point
+        in: query
+        name: type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={type,list,total}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 type 缺失或非法
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M5:V
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 议价机会看板 / 单点依赖告警（M5:V）
+      tags:
+      - 成本管理
+  /api/internal/cost/params:
+    get:
+      description: 返回 defaults（GLOBAL 行）+ overrides[]（MODEL/SUPPLIER 行，按 scope_type,
+        scope_id 升序）。所有比率字段都是**数值字符串**，透传 DB numeric(8,4) 入库原字符（含尾零，如 "0.0300"）——前端必须按数值比较（parseFloat/decimal
+        比较），**不要按字符串相等比较**（"0.0300" 与 "0.03" 数值同但字符串异）。本批次 defaults 只读（6d-2 遗留项①）。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={defaults:{loss_rate,channel_rate,tax_inclusive,withholding_tax},overrides:[…]}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M5:V
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 成本参数读取（M5:V，无归属过滤）
+      tags:
+      - 成本管理
+    put:
+      consumes:
+      - application/json
+      description: 全量替换语义：body.overrides 是替换后的完整覆盖集（[] 合法清空）；事务内 DELETE MODEL/SUPPLIER
+        全量 + 逐行 INSERT + 审计 + 逐受影响 SKU 入队 COST_RECALC。body.defaults 本批次只读——传入即 400（绝不静默忽略）；body
+        必须带 overrides 键（缺失即 400）。费率必须 0~1、小数位 ≤4、能解析为十进制；scope_id 必须在对应表真实存在；同一 (scope_type,scope_id)
+        重复即 400。所有变更**同步触发**受影响 SKU 的成本重算（PARAM_CHANGE）。
+      parameters:
+      - description: 全量替换请求体（overrides 必填）
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/cost.PutParamsInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={overrides_count,submitted_tasks,task_ids,audit_log_id}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法（含 defaults 非空 / overrides 缺失 / scope_type 非
+            MODEL/SUPPLIER / scope_id 不存在 / 重复 / 费率非法）
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M5:E（中间件）或角色不含 PRICING_OP（服务层）
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 成本参数全量替换（M5:E + 服务层角色收敛：仅 PRICING_OP）
+      tags:
+      - 成本管理
+  /api/internal/customer-quotes:
+    post:
+      consumes:
+      - application/json
+      description: APPLY：套用客户 level_code 的当前生效 price_book，items 可省略（全量带出）→ 无生效价目表
+        400；CLONE：克隆 source_quote_id 的价格（须同 customer_id，跨客户 409）；TEMP：手工填 items，valid_to
+        必填。三类型都做 floor 硬性校验——任一 unit_price < Floor(cost_baseline.unit_cost, min_gross_margin)
+        → 409（须走特价审批 §3）。落库 status=DRAFT，version_no=MAX+1（uk_cq_ver 兜底）。
+      parameters:
+      - description: 幂等键
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: customer_id / quote_type 必填；CLONE 需 source_quote_id；TEMP 需 valid_to
+          + items
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.generateQuoteBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={id,customer_id,version_no,status,quote_type,item_count,below_floor_count,price_book_version,valid_until,owner_sales_operator_id,created_at}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法 / 无生效价目表 / TEMP 缺 valid_to / quote_type 非法
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M9:E 或客户出数据域
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 客户不存在 / 源报价不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 低于 floor（含 floor_violations[]） / 克隆跨客户
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 生成客户报价（M9:E + 幂等必填 Idempotency-Key；quote_type=APPLY/CLONE/TEMP）
+      tags:
+      - 客户报价
+  /api/internal/customer-quotes/{id}/export:
+    get:
+      description: TEMP 报价且未过期（valid_until >= now）才能导出，文件含水印「临时报价，有效期至 X，仅限 Y 使用」。其余类型（APPLY/CLONE/SPECIAL/CONTRACT）不带水印。过期
+        → 409。
+      parameters:
+      - description: customer_quote.id
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: xlsx
+        description: 格式：xlsx（本批仅支持）
+        in: query
+        name: format
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'XLSX 文件流；Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet；Content-Disposition:
+            attachment; filename=\"customer_quote_<id>.xlsx\'
+          schema:
+            type: file
+        "400":
+          description: code=10001 参数非法 / format 不支持
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M9:V
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 报价不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 TEMP 报价已过期
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 导出客户报价（M9:V；直返 XLSX 文件流，不是统一响应信封；本批仅支持 format=xlsx，PDF 登记 9b-② 遗留）
+      tags:
+      - 客户报价
+  /api/internal/customer-quotes/{id}/refresh:
+    post:
+      consumes:
+      - application/json
+      description: 按最新成本基线重算 floor_price；unit_price 不动。floor_price 变了才生成新版本（version_no+1，旧版本
+        EXPIRED）；值未变则 unchanged=true 且不产生新版本（changed_items=[]）。状态可刷新仅限 DRAFT/PENDING。
+      parameters:
+      - description: customer_quote.id
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 幂等键
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: reason 可选
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/api.refreshBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data=RefreshResult{quote_id, old_version_no, new_version_no,
+            changed_items[], unchanged, status}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M9:E
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 报价不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 报价态不可刷新（APPROVED/EFFECTIVE/EXPIRED/REJECTED）
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 刷新客户报价（M9:E + 幂等必填 Idempotency-Key）
+      tags:
+      - 客户报价
+  /api/internal/customer-quotes/{id}/special-price:
+    post:
+      consumes:
+      - application/json
+      description: 把 DRAFT 客户报价标记为「特价审批中」：change_request[SPECIAL_PRICE] + 2 步 approval_step（PRICING_OP
+        → FINANCE，biz_type=change_type）+ customer_quote.special_price_status='PENDING'。margin_impact={current_price,current_margin,target_price,target_margin,delta_gap_distance}
+        预演（裁决 2）。重复申请（special_price_status=PENDING）→ 409。
+      parameters:
+      - description: customer_quote.id
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 幂等键
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: reason / expected_margin 必填
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.specialPriceBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data=SpecialPriceResult{quote_id, change_request_id,
+            step_count, status, margin_impact}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法（缺 reason/expected_margin、expected_margin 非
+            decimal）
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M9:E
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 报价不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 报价非 DRAFT / 已在特价审批中（special_price_status=PENDING）
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 申请特价（M9:E + 幂等必填 Idempotency-Key）
+      tags:
+      - 客户报价
+  /api/internal/customers:
+    get:
+      description: 返回 customer_profile + legal_subject.legal_name + internal_staff.name
+        联表。keyword 按 legal_name ILIKE 搜索。行级过滤按 owner_sales_operator_id（销售归属），与 supplier.applyOwnerScope
+        同形态。
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页（上限 200）
+        in: query
+        name: size
+        type: integer
+      - description: 按 legal_name ILIKE 搜索
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={list,total,page,size}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M8:V
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 客户列表（M8:V；行级过滤：SALES 只看自己的客户，OPS_ADMIN/PLATFORM_ADMIN 看部门及下级）
+      tags:
+      - 客户报价
+  /api/internal/customers/{id}/transfer:
+    post:
+      consumes:
+      - application/json
+      description: 首次 confirm=false 返回影响面（from/to 销售名、随迁报价数、专属价目表行数）；二次 confirm=true
+        才执行：单事务 UPDATE customer_profile.owner_sales_operator_id + UPDATE customer_quote.owner_sales_operator_id（随迁）+
+        UPDATE customer_quote.origin_owner_id（留档，NULL 才填）+ audit_log。目标必须是 ACTIVE
+        + 持 SALES 角色的 staff；移交目标是当前归属 → 409 no-op；非主管 → 403。
+      parameters:
+      - description: customer_profile.id
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 幂等键
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: to_operator_id 必填；reason 可选；confirm=true 才执行
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.transferBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: confirm=false：data=TransferImpact；confirm=true：data=TransferResult
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法 / 目标销售非法 / 缺 confirm
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M8:E 或非主管
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 客户不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 移交目标是当前归属
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 客户移交（M8:E + 仅主管；双确认；历史报价随迁 + 原归属留档）
+      tags:
+      - 客户报价
+  /api/internal/models:
+    get:
+      consumes:
+      - application/json
+      description: 全局主数据，不注入数据域行级过滤（§3.2 归属表不含 model_sku）。
+      parameters:
+      - description: 视图：family（默认）/ sku
+        in: query
+        name: view
+        type: string
+      - description: 名称 / 编码 / SKU 模糊匹配
+        in: query
+        name: keyword
+        type: string
+      - description: 厂商筛选
+        format: int64
+        in: query
+        name: vendor_id
+        type: integer
+      - description: 系列筛选
+        format: int64
+        in: query
+        name: family_id
+        type: integer
+      - description: 模型类型
+        in: query
+        name: model_type
+        type: string
+      - description: 生命周期状态
+        in: query
+        name: lifecycle_status
+        type: string
+      - description: 档位筛选
+        in: query
+        name: tier_tag
+        type: string
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={list,total,page,size}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M1:V
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 模型库列表（view=family 按系列折叠 / view=sku 展开）
+      tags:
+      - 模型管理
+    post:
+      consumes:
+      - application/json
+      description: 必须携带 Idempotency-Key；capability 未知 key 拒绝写入。
+      parameters:
+      - description: 幂等键（客户端生成唯一串）
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: 创建参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateSKUInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data=新建 SKU 完整对象
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法 / sku_code 重复 / capability 未知 key
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M1:E
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 幂等冲突
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 创建 SKU（lifecycle_status 固定为 DRAFT）
+      tags:
+      - 模型管理
+  /api/internal/models/{id}:
+    put:
+      consumes:
+      - application/json
+      description: 别名全量覆盖语义；lifecycle_status 须走 publish / deprecate / batch 流程。
+      parameters:
+      - description: SKU ID
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 维护参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateSKUInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data=更新后完整对象
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M1:E
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 SKU 不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 维护 SKU（lifecycle_status 不可直接改）
+      tags:
+      - 模型管理
+  /api/internal/models/{id}/aliases:
+    post:
+      consumes:
+      - application/json
+      description: 前端提交该 SKU 当前全部别名，服务端做差集增删；传空数组 = 清空。
+      parameters:
+      - description: SKU ID
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 别名列表（全量覆盖）
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.AliasInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data=更新后 SKU
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 别名指向其他 SKU / 非法
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M1:E
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 SKU 不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 别名维护（全量覆盖）
+      tags:
+      - 模型管理
+  /api/internal/models/{id}/deprecate:
+    post:
+      consumes:
+      - application/json
+      description: 前置 PUBLISHED/PURCHASABLE；校验 impact snapshot；创建 change_request +
+        2 步审批。SKU 状态不变。
+      parameters:
+      - description: SKU ID
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 幂等键
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: 退役参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.DeprecateInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={sku_id,approval_id,sunset_date,lifecycle_status}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 状态不允许 / snapshot 无效或过期
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M1:E
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 SKU 不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 幂等冲突
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 发起退役
+      tags:
+      - 模型管理
+  /api/internal/models/{id}/deprecation-impact:
+    get:
+      description: 统计 price_book / customer_quote 引用并推荐替代 SKU，结果落库 deprecation_impact。
+      parameters:
+      - description: SKU ID
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={sku_id,snapshot_id,references,reference_count,replacements,generated_at}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M1:V
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 SKU 不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 退役影响分析
+      tags:
+      - 模型管理
+  /api/internal/models/{id}/publish:
+    post:
+      consumes:
+      - application/json
+      description: 前置 lifecycle_status=PURCHASABLE；条件更新做并发占位（0 行 → 409）。
+      parameters:
+      - description: SKU ID
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 幂等键（建议携带）
+        in: header
+        name: Idempotency-Key
+        type: string
+      - description: '{ \'
+        in: body
+        name: body
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={sku_id,lifecycle_status,published_at}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 状态不允许
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M1:E
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 SKU 不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 并发冲突
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 上架
+      tags:
+      - 模型管理
+  /api/internal/models/aliases/merge:
+    post:
+      consumes:
+      - application/json
+      description: 被合并方名称写入 model_alias（source='MERGE'）；强制幂等。不做物理删除。
+      parameters:
+      - description: 幂等键
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: 合并参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.MergeInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={target_sku_id,merged_sku_id,alias_id,alias}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 target=source / source 被引用 / 别名已存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M1:E
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 SKU 不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 幂等冲突
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 一键合并为别名
+      tags:
+      - 模型管理
+  /api/internal/models/aliases/suggest:
+    get:
+      description: 基于 pg_trgm 相似度的 SKU 编码模糊匹配；读操作。
+      parameters:
+      - description: 查重关键字（1~64）
+        in: query
+        name: keyword
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={suggestions:[{sku_id,sku_code,score}]}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M1:V
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 别名查重建议（Top3）
+      tags:
+      - 模型管理
+  /api/internal/models/batch:
+    post:
+      consumes:
+      - application/json
+      description: 单次 ≤200；禁止上架/退役动作；单个失败不影响其他项。
+      parameters:
+      - description: 批量参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.BatchInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={total,succeeded,failed:[{sku_id,code,message}]}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 超过 200 / 动作非法（含上架/退役）
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M1:E
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 批量改状态/打标签
+      tags:
+      - 模型管理
+  /api/internal/price-books:
+    post:
+      consumes:
+      - application/json
+      description: 不落正式版本（status='DRAFT'，version_no=MAX(version_no)+1 避免撞 uk_pb_ver）。对每个
+        SKU：取当前 cost_baseline 代表组件 unit_cost → 套用优先级最高命中策略（不叠加）→ 按 price_method 算售价（CEIL
+        8 位）→ 算 floor=cost/(1-min_gross_margin) → 售价<floor 则 floor_violation=true。sku_ids
+        空=全量在架 SKU；无命中策略/无成本基线的 SKU 跳过不进 diff_report。blocked_count 只是统计，不阻止生成（发布校验在
+        8b）。
+      parameters:
+      - description: level_code/currency 必填；policy_ids/sku_ids 可选
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.generateDraftBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={draft_id,level_code,currency,item_count,diff_report,blocked_count}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M7:E
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 生成价目表草稿（M7:E，幂等必填 Idempotency-Key）
+      tags:
+      - 定价与价目表
+  /api/internal/price-books/{id}/publish:
+    post:
+      consumes:
+      - application/json
+      description: 草稿 DRAFT → APPROVING（原地升格，version_no 不变）；创建 change_request（sku_id=NULL）+
+        2 步审批（PRICING_OP → FINANCE）。floor_violation=true → 409；SCHEDULED/GRAY → 400。
+      parameters:
+      - description: price_book ID
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 幂等键
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: effective_time/mode 必填
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.publishBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={price_book_id,version_no,change_request_id,step_count,effective_time,status}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法 / SCHEDULED / GRAY
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M7:E
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 价目表不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 非草稿状态 / floor_violation
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 发布价目表（M7:E，双人审批，幂等必填 Idempotency-Key）
+      tags:
+      - 定价与价目表
+  /api/internal/price-books/{id}/rollback:
+    post:
+      consumes:
+      - application/json
+      description: 复制历史版本的 items+components 成新版本（rollback_of=target_version_no），走与发布完全相同的流程。用当前成本基线重算的
+        floor 校验目标版本售价，低于当前红线 → 409。
+      parameters:
+      - description: price_book ID（当前生效版）
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 幂等键
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: target_version_no/reason 必填
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.rollbackBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={price_book_id,version_no,change_request_id,step_count,effective_time,status}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M7:E
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 价目表/目标版本不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 非生效版 / 回滚到自己 / floor_violation
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 回滚价目表（M7:E，双人审批，幂等必填 Idempotency-Key）
+      tags:
+      - 定价与价目表
+  /api/internal/price-sync/jobs:
+    get:
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页（上限 100）
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={list,total,page,size}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M2:V
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 采集批次列表（M2:V，id DESC 分页）
+      tags:
+      - 官方价变更
+    post:
+      consumes:
+      - application/json
+      description: MVP 人工录入模式：sync_job 只是「一批暂存录入的容器」，创建即完成（status=SUCCESS、started_at=finished_at=now、error_msg=null）。sku_ids
+        仅留 item_count 痕迹（表无 payload 列）。P1 自动采集时补 RUNNING/FAILED 状态机（CLAUDE.md 遗留 7a-①）。
+      parameters:
+      - description: job_type（SYNC_PRICES 等）+ source + sku_ids
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/price.CreateJobInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={id,job_type,source,status,started_at,finished_at,error_msg,item_count}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 job_type 非法 / source 空白 / sku_ids 含非正整数
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M2:E
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 创建采集批次（M2:E，创建即 SUCCESS）
+      tags:
+      - 官方价变更
+  /api/internal/price-upconduction:
+    get:
+      description: 每行 = 一个 (sku_id, level_code) 在"成本上涨"时生成的待决策项。cost_before/cost_after
+        为成本基线前/后版本 unit_cost；price_current 为该 level 当前 EFFECTIVE 价目表代表组件售价；price_suggested
+        = price_current × (1 + cost_delta_pct)；floor_price = cost_after / (1 - min_gross_margin)；margin_before/margin_after
+        按 field_mask 剔除（SALES 不可得）；status ∈ {PENDING, FOLLOWED, NOT_FOLLOWED}；frozen_until
+        为冻结期，超时 worker 自动 NOT_FOLLOWED。
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页（上限 200）
+        in: query
+        name: size
+        type: integer
+      - description: 按状态过滤（PENDING / FOLLOWED / NOT_FOLLOWED）
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={list,total,page,size}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M7:V
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 涨价传导队列列表（M7:V；margin_* 字段按 field_mask 剔除）
+      tags:
+      - 定价与价目表
+  /api/internal/price-upconduction/{id}/decide:
+    post:
+      consumes:
+      - application/json
+      description: decision ∈ {FOLLOW, NOT_FOLLOW}。FOLLOW：仅置 status=FOLLOWED（不自动发布价目表——裁决
+        7 待 8b-3）；NOT_FOLLOW 且当前售价 < floor → 409（须走特价审批）；非 PENDING 行 → 409；不存在 → 404。
+      parameters:
+      - description: 队列行 id
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 幂等键
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: decision 必填；override_price / reason 可选
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.decideBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={queue_id,status,decided_by,decided_at,override_price?}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法 / decision 非法
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M7:E
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 队列行不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 非 PENDING / NOT_FOLLOW 低于 floor
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 涨价传导决策（M7:E + 幂等必填 Idempotency-Key；双人通过 apply）
+      tags:
+      - 定价与价目表
+  /api/internal/price-upconduction/generate:
+    post:
+      consumes:
+      - application/json
+      description: 扫描"当前版 unit_cost > 上一版 unit_cost"的 SKU，对每个 (sku_id, level_code)
+        有 EFFECTIVE 价目表的生成一行 PENDING。同 (sku_id, level_code, cost_after) 已有 PENDING/FOLLOWED
+        行 → 跳过（幂等）。裁决 7：本批只生成队列，不自动改价；FOLLOW 由人工决策。
+      parameters:
+      - description: 幂等键
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={generated_count,queue_ids,skipped_sku_ids,generated_at}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 缺幂等键
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M7:E
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 生成涨价传导队列（M7:E + 幂等必填 Idempotency-Key；手工触发）
+      tags:
+      - 定价与价目表
+  /api/internal/pricing/policies:
+    get:
+      description: 按 priority 升序、id 升序分页返回。字段名以 DDL 为准（price_method/param_value）。
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页（上限 100）
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={list,total,page,size}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M6:V
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 定价策略列表（M6:V）
+      tags:
+      - 定价与价目表
+    post:
+      consumes:
+      - application/json
+      description: scope_type 支持 ALL/VENDOR/FAMILY/SKU（MODEL_TYPE 本批不支持→400，遗留 8a-⑤）；price_method
+        支持 MARGIN/COST_UP/OFFICIAL_ANCHOR/FIXED（TIERED 不在 DDL→400，遗留 8a-②）；param_value
+        金额字符串（numeric(12,6)）；rounding_rule 自动 'CEIL'（DDL 默认值）。
+      parameters:
+      - description: code/name/scope_type/price_method/param_value/status 必填
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.upsertPolicyBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data=策略（含 id）
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法（枚举非法 / param_value 非数字）
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M6:E
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 创建定价策略（M6:E，幂等必填 Idempotency-Key）
+      tags:
+      - 定价与价目表
+  /api/internal/pricing/policies/{id}:
+    put:
+      consumes:
+      - application/json
+      description: 按 id 全量字段更新；校验同创建。策略不存在→404。
+      parameters:
+      - description: 策略 id
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 全量字段
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.upsertPolicyBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data=策略
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M6:E
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 策略不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 更新定价策略（M6:E，幂等必填 Idempotency-Key）
+      tags:
+      - 定价与价目表
+  /api/internal/quotes/{id}/approve:
+    post:
+      consumes:
+      - application/json
+      description: 前置 status=APPROVING（否则 409）；SELF 域只能批自己引入的供应商（越权 403）。事务内：状态推进
+        + todo DONE + task_job(ACTIVATE_QUOTE) 入队 + 审计。immediate（valid_from≤now）时事务提交后同步激活。
+      parameters:
+      - description: 报价单 ID
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 幂等键
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={id,status,approved_at,activate_at,immediate}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M4:A / 非归属供应商
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 报价单不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 状态冲突（非 APPROVING）/ 幂等冲突
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 审批通过（幂等）
+      tags:
+      - 报价审批
+  /api/internal/quotes/{id}/confirm-remove:
+    post:
+      consumes:
+      - application/json
+      description: 已过宽限期才可执行（valid_to+quote_grace_days < now，实时算），未过→409。confirm=true
+        同事务置 EXPIRED+remove_confirmed+COST_RECALC(EXPIRE_REMOVE)+event_outbox；confirm=false
+        撤销确认（仅当尚未执行剔除）。
+      parameters:
+      - description: 报价单 ID
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 幂等键
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: '{confirm, reason}'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/supplier.ConfirmRemoveInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={id,status,remove_confirmed,executed_at}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M4:E / 非归属供应商
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 报价单不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 仍在宽限期 / 非生效状态 / 幂等冲突
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 人工确认剔除（幂等，立即执行）
+      tags:
+      - 报价审批
+  /api/internal/quotes/{id}/diff:
+    get:
+      description: 以 sku_id 为键三方对照；market_best 为全市场 EFFECTIVE 最低价（不做归属过滤，放开比价决议）。distortion=true
+        表示全单倍率完全相同（缓存维度标红）。margin_preview 为简化预演（floor=unit_price/(1−min_gross_margin)，真正预演待
+        Stage 6）。
+      parameters:
+      - description: 报价单 ID
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data=QuoteDiff
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M4:V / 非归属供应商
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 报价单不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 差异对比（本次 vs 上一版 vs 官方价 vs 市场最低）+ 毛利预演 + 失真提示
+      tags:
+      - 报价审批
+  /api/internal/quotes/{id}/reject:
+    post:
+      consumes:
+      - application/json
+      description: reason 必填 10~500 字（按 rune 计），写入 reject_reason（供应商可见）+ rejected_at。前置
+        status=APPROVING（否则 409）。REJECTED 是终态，修订必须提交新版本。
+      parameters:
+      - description: 报价单 ID
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 幂等键
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: 驳回原因
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/supplier.RejectInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={id,status,rejected_at}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 reason 长度非法
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M4:A / 非归属供应商
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 报价单不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 状态冲突（非 APPROVING）/ 幂等冲突
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 审批驳回（幂等）
+      tags:
+      - 报价审批
+  /api/internal/quotes/activate-due:
+    post:
+      description: 扫描 status=APPROVED_PENDING 且 valid_from≤now 的报价单，逐条独立事务激活：旧 EFFECTIVE→EXPIRED
+        → 本单 EFFECTIVE → PENDING_VERIFY SKU→PURCHASABLE → COST_RECALC 入队 → event_outbox。单条失败记
+        last_error 跳过，不中断整批。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={scanned,activated,items:[{id,supplier_id,version_no,closed_previous_id}]}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M4:E
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 激活到期报价（运维 / E2E 手动端点）
+      tags:
+      - 报价审批
+  /api/internal/quotes/anomalies:
+    get:
+      description: 实时计算不落表。取近 days 天 status∈(APPROVING,APPROVED_PENDING,EFFECTIVE)
+        的报价。判定：偏离上一版 |p−prev|/prev > quote_anomaly_pct(0.20) 或偏离市场最低 (p−best)/best
+        > quote_anomaly_mkt(0.30)（严格大于）。reason：PREV_DEVIATION / MARKET_DEVIATION /
+        BOTH。
+      parameters:
+      - default: 30
+        description: 回溯窗口（天）
+        in: query
+        name: days
+        type: integer
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={list,total,page,size}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M4:V
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 报价异常清单（D4，不做归属过滤——比价属平台级市场信息）
+      tags:
+      - 报价审批
+  /api/internal/quotes/expiring:
+    get:
+      description: 返回 status=EFFECTIVE 且 valid_to ≤ now+days 的报价单。grace_until 实时算（valid_to+quote_grace_days，不写列）。single_point=该单内是否有
+        SKU 只有这一家有效报价（跨供应商计数）。alert_level：days>7→NORMAL；0~7→HIGH；过期未过宽限→URGENT；过宽限未确认→URGENT+pending_remove；单点依赖阈值提前至
+        14/7 且级别升一级。
+      parameters:
+      - default: 7
+        description: 到期窗口（天）
+        in: query
+        name: days
+        type: integer
+      - description: 只看单点依赖
+        in: query
+        name: only_single_point
+        type: boolean
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={list,total,page,size}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M4:V
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 到期清单（行级过滤，含单点依赖与级别）
+      tags:
+      - 报价审批
+  /api/internal/quotes/pending:
+    get:
+      description: status=APPROVING 的报价单，按数据域过滤（SELF=我引入的供应商；DEPT/DEPT_SUB/ALL 按设计
+        §3.2）。按提交时间 FIFO。
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页
+        in: query
+        name: size
+        type: integer
+      - description: 供应商筛选
+        format: int64
+        in: query
+        name: supplier_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={list,total,page,size}（含 wait_hours/has_previous）
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M4:V
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 待审批报价（行级过滤）
+      tags:
+      - 报价审批
+  /api/internal/quotes/retro-effective:
+    post:
+      consumes:
+      - application/json
+      description: 集合路径 + supplier_id 入体（5d 裁决 1）。effective_time 必须过去；audit_reason
+        ≥10 字（按 rune）；创建即 APPROVED_PENDING 并立即激活（复用 §10 ActivateDueQuotes，同事务关闭旧 EFFECTIVE）；COST_RECALC
+        payload 带 effective_time（绝不向更早回灌）。激活失败写 alert(QUOTE_ACTIVATE_FAILED) 并返回明确错误。当月补录超
+        retro_monthly_limit(5) 写 RETRO_LIMIT alert。撞 uk_quote_pending → 409 并带出阻塞单号与版本号。
+      parameters:
+      - description: 幂等键
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: '{supplier_id, effective_time, valid_to, audit_reason, items}'
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/supplier.RetroEffectiveInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={id,status,retroactive,closed_previous_id,cost_recalc_queued,retro_count_this_month,alert_created}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法 / 未来时间 / 理由不足
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M4:P
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 供应商不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 已有待生效报价（含阻塞单号）/ 幂等冲突
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 特权补录（RETRO_OP，幂等，免审批）
+      tags:
+      - 报价审批
+  /api/internal/quotes/scan:
+    post:
+      description: type=expire：到期前 T-7/T-3 生成 todo+alert（去重）；type=expire-final：兜底处理
+        remove_confirmed=true 仍未剔除的历史遗留（正常查不到行）；type=anomaly：异常检测写 alert。均不挂幂等（扫描语义，靠去重保证可重复执行）。
+      parameters:
+      - description: expire / expire-final / anomaly
+        in: query
+        name: type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={type,scanned,todo_created,alert_created,processed}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 type 非法
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M4:E
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 手动触发到期/异常扫描（领域方法 + 手动端点，不装 ticker）
+      tags:
+      - 报价审批
+  /api/internal/staging-prices:
+    get:
+      description: diff_status：NEW（无同币种当前官方价）/ CHANGED / UNCHANGED / UNMATCHED（sku_id=null）。diff_detail
+        只含 CHANGED 组件：old_price 为 DB numeric(20,8) 原文（如 "2.50000000"，与录入原文 "2.50"
+        数值等价——前端按数值比较，勿按字符串相等）；delta_pct=(new−old)/old 6 位小数，old=0 或 NEW 时为 null。payload
+        多出的组件不参与比对。按 id ASC（录入序）分页。
+      parameters:
+      - description: 按采集批次过滤
+        format: int64
+        in: query
+        name: sync_job_id
+        type: integer
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页（上限 100）
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={list,total,page,size}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M2:V
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 暂存区列表（M2:V，diff 实时计算）
+      tags:
+      - 官方价变更
+    post:
+      consumes:
+      - application/json
+      description: 逐行校验（sku_id 存在 / raw_sku_code 精确匹配 / currency 3 位 / payload 非空且值合法非负
+        decimal），任一行非法整批 400 不落库。sku_id 与 raw_sku_code 二选一（sku_id 优先，都给了忽略 raw_sku_code）；raw_sku_code
+        匹配不到 → sku_id=null、match_status=UNMATCHED（只标记，处理策略待产品裁决——遗留 7a-③）。processed
+        恒 false（7b confirm 置 true）。diff 不在写入时落库——GET 列表实时计算。
+      parameters:
+      - description: sync_job_id + items[]（sku_id/raw_sku_code 二选一 + currency + payload）
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/price.CreateStagingInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={created_count,staging_ids}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法（含幂等键缺失）
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M2:E
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 sync_job_id 不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 幂等冲突
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 手工录入采集结果（M2:E，幂等必填 Idempotency-Key）
+      tags:
+      - 官方价变更
+  /api/internal/staging-prices/confirm:
+    post:
+      consumes:
+      - application/json
+      description: 校验 staging_ids 非空 / 每条存在且属于该 sync_job 且 processed=false / effective_time≤now（>now→400，预约生效登记为遗留
+        7b-①）；同 SKU 多条以 max(staging.id) 胜出；自动判涨跌方向（任一组件 new>old→PRICE_UP 2 步审批 MODEL_OPS→PRICING_OP，否则
+        PRICE_DOWN 1 步 MODEL_OPS）；涨价才生成 margin_preview（floor=price×(1+loss)×(1+channel)/(1−min_gross_margin)）。单事务：change_request
+        + approval_steps + staging.processed=true。生效连锁（price_version 新版本 / 报价静默跟随
+        / COST_RECALC 入队 / official_price.changed 出站 / cache_version+1）在审批全部通过时由 DecideApproval
+        回调执行。
+      parameters:
+      - description: sync_job_id + staging_ids[] + effective_time(RFC3339，≤now)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/price.ConfirmInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={change_request_id,step_count}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法（staging_ids 空 / effective_time 未来或非法 / 批次不匹配）
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "403":
+          description: code=10003 无 M2:E
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 staging_id 不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 staging 已确认 / 幂等冲突
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 确认入正式版本（M2:E，幂等必填 Idempotency-Key）
+      tags:
+      - 官方价变更
+  /api/internal/workbench/metrics:
+    get:
+      description: 已认证即可；按的角色裁剪：PROCUREMENT 4 卡（待审批报价/本月生效/30天内到期/单点依赖）、PRICING_OP
+        3 卡（待发布价目表/破 floor/成本上涨待决策）、SALES 3 卡（客户/待确认报价/季度成交额占位）、FINANCE 2 卡（汇率锁定占位/押金未付）。多角色取并集。**本接口不返回
+        unit_cost/floor_price/margin 等字段**（成本数据只在 service 内部用于破 floor 判定）。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data=MetricsResult{cards[]}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 工作台指标卡（按角色裁剪）
+      tags:
+      - 工作台
+  /api/internal/workbench/todos:
+    get:
+      description: 已认证即可；采购/销售/定价/财务看自己的待办（assignee_id=operator_id），PLATFORM_ADMIN
+        看全部。按 (biz_type,biz_id,priority) 去重。deeplink 按 biz_type 生成。
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页
+        in: query
+        name: size
+        type: integer
+      - description: 业务类型（QUOTE / QUOTE_EXPIRE）
+        in: query
+        name: biz_type
+        type: string
+      - description: 状态（OPEN / DONE）
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data=TodoListResult{list,total,page,size}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 工作台待办聚合（按角色裁剪）
+      tags:
+      - 工作台
+  /api/supplier/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: 账号密码登录。成功返回 token（明文仅在响应中出现一次，服务端只存 sha256）与权限包快照 role_snapshot。连续失败
+        5 次锁定 15 分钟（429）；主体冻结返回 423。
+      parameters:
+      - description: 登录参数
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={token, snapshot}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数校验失败
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 账号或密码错误
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "423":
+          description: code=10006 主体已冻结
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "429":
+          description: code=10007 失败次数超限，锁定 15 分钟
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      summary: 登录（三门户共用，portal 由路由前缀决定）
+      tags:
+      - 认证
+  /api/supplier/auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: 按 Authorization 头中的 Bearer token 吊销会话（revoked=true）。成功返回 204 无响应体。
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: 会话已吊销
+        "401":
+          description: code=10002 未携带或非法 token
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 登出（吊销当前会话）
+      tags:
+      - 认证
+  /api/supplier/quotes:
+    post:
+      consumes:
+      - application/json
+      description: 必须携带 Idempotency-Key。校验顺序按 05-quotes.md §3 九步：items 非空/≤500 行/SKU
+        不重复且在可报价集合内 → 过去时间静默钳制（响应 clamped:true）→ valid_to>valid_from → 币种锁定 → 汇率档位（USD
+        必填 8 档，CNY 传了置 null）→ 倍率-价格自洽复核（容差 1e-4，无官方价强制绝对价）→ 非终态互斥（409）→ 未知 component_type/constraints
+        key 拒绝。落库单事务：quote_sheet(APPROVING, version_no=max+1) + items + components
+        + todo_task + audit_log。
+      parameters:
+      - description: 幂等键（客户端生成唯一串）
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: 报价单（valid_from/valid_to/items 必填）
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/supplier.SubmitQuoteInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={id,supplier_id,version_no,status,valid_from,valid_to,source,retroactive,clamped,item_count,submitted_at}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 校验失败（message 可直接展示）/ 同幂等键异 body
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 供应商档案不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 已存在审批中/待生效报价（非终态互斥）或幂等冲突
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 提交报价（幂等、双向自洽复核、钳制生效时间）
+      tags:
+      - 供应商门户
+  /api/supplier/quotes/{id}:
+    get:
+      description: 越权（不是自己的报价单）返回 404（不返回 403，避免探测他人 ID）。响应含报价单头 + items[]（sku_code/model_name/currency/fx_tier/constraints/components[]）+
+        decision。不含官方价以外任何成本信息。
+      parameters:
+      - description: 报价单 ID
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data=报价详情
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 id 非法
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 报价单不存在或不属于当前供应商
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 报价详情
+      tags:
+      - 供应商门户
+  /api/supplier/quotes/history:
+    get:
+      description: 只返回登录主体自己的报价（服务层按 supplier_id 硬过滤，不接受入参指定）；含被覆盖/过期/驳回的全部历史版本。不含任何他人报价/平台售价/毛利。decision.result
+        取值 APPROVED/REJECTED，未审批为 null；驳回原因供应商可见。
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页
+        in: query
+        name: size
+        type: integer
+      - description: 状态筛选（§1 状态字典）
+        in: query
+        name: status
+        type: string
+      - description: SKU 筛选
+        format: int64
+        in: query
+        name: sku_id
+        type: integer
+      - description: 生效时间下限（ISO 8601）
+        in: query
+        name: from
+        type: string
+      - description: 生效时间上限（ISO 8601）
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={list,total,page,size}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 时间参数非法
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 供应商档案不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 报价历史（含审批结论）
+      tags:
+      - 供应商门户
+  /api/supplier/quotes/import/confirm:
+    post:
+      consumes:
+      - application/json
+      description: 请求体与手工提交 §3 同构（valid_from/valid_to/remark/items[]）；与 §3 共用同一套九步校验（不信任前端，全量重校验）。不做「必须是
+        preview_items 的 sku 子集」校验（技术上无法闭环，属前端纪律）。落库 source='IMPORT'，审计 QUOTE_IMPORT，同样进入
+        APPROVING + todo_task。
+      parameters:
+      - description: 幂等键
+        in: header
+        name: Idempotency-Key
+        required: true
+        type: string
+      - description: 报价单（valid_from/valid_to/items 必填）
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/supplier.SubmitQuoteInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data 同 §3 提交报价
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 校验失败（message 可直接展示）
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "409":
+          description: code=10005 非终态互斥 / 幂等冲突
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 确认导入（幂等，不跳过审批）
+      tags:
+      - 供应商门户
+  /api/supplier/quotes/import/preview:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 逐行校验（SKU 命中/币种锁定/汇率档位/四种填法），返回 OK/WARN/ERROR 与 preview_items（只含
+        OK+WARN）。ERROR 行不得入库。confirm 时前端把修正后的行整体回传，服务端重新全量校验（不信任前端）。行号从 2 开始（1=表头）。
+      parameters:
+      - description: CSV 文件（≤2MB，≤500 行）
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={token,total,ok_count,warn_count,error_count,rows,preview_items}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 文件超限 / 行数超限 / CSV 格式非法
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 上传校验预览（不落库）
+      tags:
+      - 供应商门户
+  /api/supplier/quotes/template:
+    get:
+      description: 列按可报价 SKU 的官方价组件并集动态生成（official_/multiplier_/price_ × N 组件）；valid_from/valid_to
+        不在 CSV 里（由 confirm 请求体传入），last_valid_to 为该 SKU 上次报价到期日只读参考。绝不含他人报价/平台成本/毛利。?format=xlsx
+        预留但本阶段返回 400。
+      parameters:
+      - description: history / vendor / family / active（默认）
+        in: query
+        name: scope
+        type: string
+      - description: scope=vendor 时必填
+        format: int64
+        in: query
+        name: vendor_id
+        type: integer
+      - description: scope=family 时必填
+        format: int64
+        in: query
+        name: family_id
+        type: integer
+      - description: csv（默认）/ xlsx（预留，返回 400）
+        in: query
+        name: format
+        type: string
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: CSV 文件（带 BOM）
+          schema:
+            type: string
+        "400":
+          description: code=10001 format=xlsx 暂未开放
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 供应商档案不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 下载导入模板（CSV，UTF-8 带 BOM）
+      tags:
+      - 供应商门户
+  /api/supplier/skus:
+    get:
+      description: 返回 lifecycle_status ∈ (PUBLISHED, PURCHASABLE, PENDING_VERIFY)
+        的 SKU，含官方价基准只读列。不含他人报价/平台成本/毛利。
+      parameters:
+      - default: 1
+        description: 页码
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每页
+        in: query
+        name: size
+        type: integer
+      - description: 关键字
+        in: query
+        name: keyword
+        type: string
+      - description: 厂商筛选
+        format: int64
+        in: query
+        name: vendor_id
+        type: integer
+      - description: 系列筛选
+        format: int64
+        in: query
+        name: family_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: code=0；data={list,total,page,size}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "400":
+          description: code=10001 参数非法
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "401":
+          description: code=10002 未认证
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+        "404":
+          description: code=10004 供应商档案不存在
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 供应商可报价 SKU 列表
+      tags:
+      - 供应商门户
+  /healthz:
+    get:
+      description: 实际 Ping 数据库。200 {"status":"ok","db":"up"}；503 {"status":"degraded","db":"down"}。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: status=ok, db=up
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: status=degraded, db=down
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: 健康检查（运维探针，不走统一响应包）
+      tags:
+      - 运维
+  /internal/alerts:
+    get:
+      parameters:
+      - description: 严重级别（CRITICAL/HIGH/MID/LOW）
+        in: query
+        name: severity
+        type: string
+      - description: 状态（OPEN/HANDLING/RESOLVED/IGNORED）
+        in: query
+        name: status
+        type: string
+      - description: 告警类型（QUOTE_EXPIRE/QUOTE_ANOMALY/RETRO_LIMIT）
+        in: query
+        name: alert_type
+        type: string
+      - description: 页码（默认 1）
+        in: query
+        name: page
+        type: integer
+      - description: 每页大小（默认 20，最大 100）
+        in: query
+        name: size
+        type: integer
+      responses:
+        "200":
+          description: code=0；data=AlertListResult{list,total,page,size}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 告警列表
+      tags:
+      - workbench
+    post:
+      parameters:
+      - description: 处理动作
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/workbench.AlertActionInput'
+      responses:
+        "200":
+          description: code=0；data=AlertActionResult{alert_id,status,todo_id}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 告警处理
+      tags:
+      - workbench
+  /internal/audit-logs:
+    get:
+      parameters:
+      - description: 动作（如 CUSTOMER_QUOTE_ACCEPTED）
+        in: query
+        name: action
+        type: string
+      - description: 目标类型（如 CUSTOMER_QUOTE）
+        in: query
+        name: target_type
+        type: string
+      - description: 目标 ID
+        in: query
+        name: target_id
+        type: integer
+      - description: 操作员 ID
+        in: query
+        name: operator_id
+        type: integer
+      - description: 操作员角色
+        in: query
+        name: operator_role
+        type: string
+      - description: 来源类型（INTERNAL/WORKER/SYSTEM）
+        in: query
+        name: source_type
+        type: string
+      - description: 起始时间（RFC3339，左闭）
+        in: query
+        name: from
+        type: string
+      - description: 结束时间（RFC3339，右开）
+        in: query
+        name: to
+        type: string
+      - description: 页码（默认 1）
+        in: query
+        name: page
+        type: integer
+      - description: 每页大小（默认 20，最大 100）
+        in: query
+        name: size
+        type: integer
+      responses:
+        "200":
+          description: code=0；data=AuditListResult{items,total}
+          schema:
+            $ref: '#/definitions/api.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: 审计日志列表
+      tags:
+      - workbench
+  /internal/audit-logs/export:
+    get:
+      parameters:
+      - description: 格式（csv/xlsx）
+        in: query
+        name: format
+        required: true
+        type: string
+      - description: 起始时间（RFC3339，左闭）
+        in: query
+        name: from
+        required: true
+        type: string
+      - description: 结束时间（RFC3339，右开）
+        in: query
+        name: to
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      security:
+      - BearerAuth: []
+      summary: 导出审计日志
+      tags:
+      - workbench
+securityDefinitions:
+  BearerAuth:
+    description: Bearer <token>，登录后获得
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

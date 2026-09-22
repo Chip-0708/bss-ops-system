@@ -1,0 +1,3 @@
+DROP INDEX IF EXISTS idx_sku_tags;
+ALTER TABLE model_sku
+  DROP COLUMN IF EXISTS tags;

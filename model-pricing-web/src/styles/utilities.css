@@ -1,0 +1,8 @@
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.text-muted {
+  color: var(--app-text-muted);
+}
+

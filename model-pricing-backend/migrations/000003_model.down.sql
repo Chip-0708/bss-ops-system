@@ -1,0 +1,8 @@
+DROP TABLE IF EXISTS price_version;
+DROP TABLE IF EXISTS price_component;
+DROP TABLE IF EXISTS model_alias;
+DROP TABLE IF EXISTS model_sku;
+DROP TABLE IF EXISTS model_family;
+DROP TABLE IF EXISTS vendor;
+DROP EXTENSION IF EXISTS pg_trgm;
+DROP EXTENSION IF EXISTS btree_gist;

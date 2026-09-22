@@ -1,0 +1,14 @@
+DROP TABLE IF EXISTS sys_config;
+DROP TABLE IF EXISTS cron_lock;
+DROP TABLE IF EXISTS cache_version;
+DROP TABLE IF EXISTS todo_task;
+DROP TABLE IF EXISTS alert;
+DROP TABLE IF EXISTS audit_log;
+DROP TABLE IF EXISTS idempotency_key;
+DROP TABLE IF EXISTS event_outbox;
+DROP TABLE IF EXISTS task_job;
+DROP TABLE IF EXISTS model_application;
+DROP TABLE IF EXISTS approval_step;
+DROP TABLE IF EXISTS change_request;
+DROP TABLE IF EXISTS staging_price;
+DROP TABLE IF EXISTS sync_job;
