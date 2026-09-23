@@ -1,5 +1,8 @@
 -- 000007_seed.down：回滚种子数据（只删除，不 DROP 任何 DDL）。
 
+-- 根组织（先删，它是 internal_staff 的外键父表；回滚顺序上 000013 已先于本文件被 down）
+DELETE FROM org_unit;
+
 -- 授权关系与角色/权限种子
 DELETE FROM role_permission;
 DELETE FROM role_mutex;

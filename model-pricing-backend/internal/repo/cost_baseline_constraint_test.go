@@ -115,8 +115,8 @@ func TestIsVersionConflictConstraint_UKCostCurrent(t *testing.T) {
 	var skuID int64
 	err := db.Transaction(func(tx *gorm.DB) error {
 		ts := time.Date(2026, 9, 15, 0, 0, 0, 0, time.UTC)
-		later := ts.Add(time.Hour)
 		skuID = seedSKU(t, tx, "uk")
+		later := ts.Add(time.Hour)
 
 		// 两条有效期首尾相接，避免同时触发 ex_cost_no_overlap；本用例只验证 uk_cost_current。
 		require.NoError(t, insertBaseline(tx, skuID, 1, true, ts, &later), "seed 第一条应成功")

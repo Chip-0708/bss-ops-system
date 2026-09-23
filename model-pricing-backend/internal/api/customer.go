@@ -106,6 +106,42 @@ func (h *CustomerHandler) ListCustomers(c *gin.Context) {
 	response.Success(c, res)
 }
 
+// GetQuoteContext 返回生成报价前的当前价目表与本客户历史报价。
+//
+// @Summary 客户报价上下文（M9:V；当前价目表 + 可克隆历史）
+// @Description 返回客户 level_code、当前 EFFECTIVE 价目表售价项，以及该客户历史报价及售价项。只含售价，不返回成本、floor 或毛利；执行与客户列表相同的数据域校验。
+// @Tags 客户报价
+// @Produce json
+// @Security BearerAuth
+// @Param id path int64 true "customer_profile.id"
+// @Param page query int false "历史报价页码" default(1)
+// @Param size query int false "历史报价每页（上限 200）" default(20)
+// @Success 200 {object} api.APIResponse "code=0；data=QuoteContext{customer_id,level_code,price_book,history}"
+// @Failure 401 {object} api.APIResponse "code=10002 未认证"
+// @Failure 403 {object} api.APIResponse "code=10003 无 M9:V 或客户超出数据域"
+// @Failure 404 {object} api.APIResponse "code=10004 客户不存在"
+// @Router /api/internal/customers/{id}/quote-context [get]
+func (h *CustomerHandler) GetQuoteContext(c *gin.Context) {
+	op := middleware.OperatorFrom(c)
+	if op == nil {
+		response.Error(c, apperr.ErrUnauthorized)
+		return
+	}
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		response.Error(c, apperr.New(apperr.ErrInvalidParams.Code, "id 非法", apperr.ErrInvalidParams.Status))
+		return
+	}
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+	res, err := h.svc.GetQuoteContext(c.Request.Context(), id, scopeOf(op), page, size)
+	if err != nil {
+		response.Error(c, customerErrToAppErr(err))
+		return
+	}
+	response.Success(c, res)
+}
+
 // transferBody 移交请求体。
 type transferBody struct {
 	ToOperatorID int64  `json:"to_operator_id" binding:"required"`

@@ -307,6 +307,19 @@ func TestPortal_AcceptQuote_SpecialPriceApproved(t *testing.T) {
 	}
 }
 
+func TestPortal_AcceptQuote_EffectiveSpecialPriceCannotRepeat(t *testing.T) {
+	sp := SpecialPriceApproved
+	f := &fakePortalStore{quoteRow: &QuoteRow{ID: 1, CustomerID: 1, Status: QuoteStatusEffective, SpecialPriceStatus: &sp}}
+	svc := NewPortalService(f, nil)
+	_, err := svc.AcceptQuote(context.Background(), 1, 1, 1, "new-request")
+	if !errors.Is(err, ErrPortalQuoteNotApprovable) || f.gotCustomerIDForAccept != 0 {
+		t.Fatalf("effective quote was submitted again: err=%v, customer=%d", err, f.gotCustomerIDForAccept)
+	}
+	if CanAcceptQuote(QuoteStatusEffective, &sp, nil, time.Now()) {
+		t.Fatal("effective quote must have can_accept=false")
+	}
+}
+
 func TestPortal_AcceptQuote_NotFound_OtherCustomer(t *testing.T) {
 	// 行级过滤命中：他人报价 → 404。
 	f := &fakePortalStore{

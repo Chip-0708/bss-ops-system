@@ -62,6 +62,8 @@ func Load() (*Config, error) {
 	v.SetDefault("worker.jobs.activate_quote.interval", time.Minute)
 	v.SetDefault("worker.jobs.cost_recalc.enable", true)
 	v.SetDefault("worker.jobs.cost_recalc.interval", time.Minute)
+	v.SetDefault("worker.jobs.event_deliver.enable", true)
+	v.SetDefault("worker.jobs.event_deliver.interval", time.Minute)
 
 	for key, env := range bindings {
 		if err := v.BindEnv(key, env); err != nil {

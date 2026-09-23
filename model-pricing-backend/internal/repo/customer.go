@@ -631,6 +631,69 @@ func (r *CustomerRepo) LoadQuoteItems(ctx context.Context, quoteID int64) ([]cus
 	return out, nil
 }
 
+// ListCustomerQuotePreviews 返回同一客户的历史报价与售价明细；不返回成本、floor 或毛利。
+func (r *CustomerRepo) ListCustomerQuotePreviews(ctx context.Context, customerID int64, page, size int) (*customer.QuoteHistoryPage, error) {
+	tx := r.txOf(ctx)
+	var total int64
+	if err := tx.Table("customer_quote").Where("customer_id = ?", customerID).Count(&total).Error; err != nil {
+		return nil, fmt.Errorf("count customer quote previews: %w", err)
+	}
+	type quotePreviewRow struct {
+		ID               int64      `gorm:"column:id"`
+		VersionNo        int        `gorm:"column:version_no"`
+		Status           string     `gorm:"column:status"`
+		QuoteType        string     `gorm:"column:quote_type"`
+		ValidUntil       *time.Time `gorm:"column:valid_until"`
+		PriceBookVersion int        `gorm:"column:price_book_version"`
+		CreatedAt        time.Time  `gorm:"column:created_at"`
+	}
+	var quotes []quotePreviewRow
+	if err := tx.Table("customer_quote").Where("customer_id = ?", customerID).
+		Select("id, version_no, status, quote_type, valid_until, price_book_version, created_at").
+		Order("id DESC").Offset((page - 1) * size).Limit(size).Scan(&quotes).Error; err != nil {
+		return nil, fmt.Errorf("list customer quote previews: %w", err)
+	}
+	result := &customer.QuoteHistoryPage{List: make([]customer.QuoteHistoryPreview, 0, len(quotes)), Total: total, Page: page, Size: size}
+	if len(quotes) == 0 {
+		return result, nil
+	}
+	quoteIDs := make([]int64, 0, len(quotes))
+	for _, quote := range quotes {
+		quoteIDs = append(quoteIDs, quote.ID)
+	}
+	type itemPreviewRow struct {
+		QuoteID   int64  `gorm:"column:customer_quote_id"`
+		SKUID     int64  `gorm:"column:sku_id"`
+		SKUCode   string `gorm:"column:sku_code"`
+		Currency  string `gorm:"column:currency"`
+		UnitPrice string `gorm:"column:unit_price"`
+	}
+	var itemRows []itemPreviewRow
+	if err := tx.Table("customer_quote_item cqi").
+		Joins("JOIN model_sku ms ON ms.id = cqi.sku_id").
+		Where("cqi.customer_quote_id IN ?", quoteIDs).
+		Select("cqi.customer_quote_id, cqi.sku_id, ms.sku_code, cqi.currency, cqi.unit_price").
+		Order("cqi.customer_quote_id DESC, cqi.sku_id").Scan(&itemRows).Error; err != nil {
+		return nil, fmt.Errorf("list customer quote preview items: %w", err)
+	}
+	itemsByQuote := make(map[int64][]customer.QuotePreviewItem, len(quotes))
+	for _, item := range itemRows {
+		itemsByQuote[item.QuoteID] = append(itemsByQuote[item.QuoteID], customer.QuotePreviewItem{
+			SKUID: item.SKUID, SKUCode: item.SKUCode, Currency: item.Currency, UnitPrice: item.UnitPrice,
+		})
+	}
+	for _, quote := range quotes {
+		items := itemsByQuote[quote.ID]
+		if items == nil {
+			items = []customer.QuotePreviewItem{}
+		}
+		result.List = append(result.List, customer.QuoteHistoryPreview{ID: quote.ID, VersionNo: quote.VersionNo,
+			Status: quote.Status, QuoteType: quote.QuoteType, ValidUntil: quote.ValidUntil,
+			PriceBookVersion: quote.PriceBookVersion, CreatedAt: quote.CreatedAt, Items: items})
+	}
+	return result, nil
+}
+
 // LoadQuoteOwner 实现 customer.Store.LoadQuoteOwner。
 func (r *CustomerRepo) LoadQuoteOwner(ctx context.Context, quoteID int64) (customerID int64, ownerSalesID int64, found bool, err error) {
 	var row struct {

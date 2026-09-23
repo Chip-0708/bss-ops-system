@@ -57,6 +57,8 @@ type fakeStore struct {
 	marginErr         error
 	skuCode           string
 	skuCodeErr        error
+	quoteHistory      *QuoteHistoryPage
+	quoteHistoryErr   error
 	genRes            *GeneratedQuote
 	genErr            error
 	// 捕获
@@ -107,6 +109,9 @@ func (f *fakeStore) LoadMinGrossMargin(_ context.Context) (decimal.Decimal, erro
 }
 func (f *fakeStore) LoadSKUCode(_ context.Context, _ int64) (string, error) {
 	return f.skuCode, f.skuCodeErr
+}
+func (f *fakeStore) ListCustomerQuotePreviews(_ context.Context, _ int64, _, _ int) (*QuoteHistoryPage, error) {
+	return f.quoteHistory, f.quoteHistoryErr
 }
 func (f *fakeStore) GenerateQuoteTx(_ context.Context, in GenerateQuoteTxInput, _ int64, _ string) (*GeneratedQuote, error) {
 	f.lastGenInput = in
@@ -178,6 +183,33 @@ func TestListCustomers_PageGuard(t *testing.T) {
 	}
 	if res.Page != 1 || res.Size != 20 {
 		t.Fatalf("page=%d size=%d, want 1/20", res.Page, res.Size)
+	}
+}
+
+func TestGetQuoteContext_ReturnsPriceBookAndHistory(t *testing.T) {
+	f := baseFake()
+	f.quoteHistory = &QuoteHistoryPage{List: []QuoteHistoryPreview{{ID: 9, VersionNo: 2, Status: QuoteStatusApproved,
+		QuoteType: QuoteTypeApply, Items: []QuotePreviewItem{{SKUID: 40, SKUCode: "gpt-5", Currency: "CNY", UnitPrice: "3.80000000"}}}},
+		Total: 1, Page: 1, Size: 20}
+	svc := NewService(f, fixedNow)
+	got, err := svc.GetQuoteContext(context.Background(), 1, scopeALL(), 1, 20)
+	if err != nil {
+		t.Fatalf("err=%v", err)
+	}
+	if got.PriceBook == nil || got.PriceBook.ID != 3 || len(got.PriceBook.Items) != 2 {
+		t.Fatalf("price_book=%+v", got.PriceBook)
+	}
+	if len(got.History.List) != 1 || got.History.List[0].ID != 9 {
+		t.Fatalf("history=%+v", got.History)
+	}
+}
+
+func TestGetQuoteContext_EnforcesScope(t *testing.T) {
+	f := baseFake()
+	f.scopeInScope = false
+	_, err := NewService(f, fixedNow).GetQuoteContext(context.Background(), 1, scopeSELF(8), 1, 20)
+	if !errors.Is(err, ErrCustomerOutOfScope) {
+		t.Fatalf("err=%v, want ErrCustomerOutOfScope", err)
 	}
 }
 

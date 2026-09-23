@@ -75,6 +75,13 @@ type Store interface {
 	FindByOperator(ctx context.Context, operatorID int64) (*Supplier, error)
 	// ListSupplierSKUs 返回 lifecycle_status ∈ (PUBLISHED, PURCHASABLE, PENDING_VERIFY) 的 SKU。
 	ListSupplierSKUs(ctx context.Context, q ListSupplierSKUQuery) (*ListSupplierSKUResult, error)
+
+	// SubmitModelApplication 提交新模型申请（含 pg_trgm 查重 top3）。
+	SubmitModelApplication(ctx context.Context, supplierID int64, in SubmitApplicationInput, operatorID int64, requestID string) (*ModelApplication, error)
+	// ListModelApplications 申请列表（q.SupplierID 非空时按供应商行级过滤）。
+	ListModelApplications(ctx context.Context, q ApplicationQuery) (*ApplicationListResult, error)
+	// DecideModelApplication 内部审核；终态守卫由条件更新（WHERE status='SUBMITTED'）保证。
+	DecideModelApplication(ctx context.Context, id int64, in ApplicationDecisionInput, operatorID int64, requestID string) (*ModelApplication, error)
 }
 
 // Service 是供应商身份解析服务。

@@ -18,6 +18,7 @@ import (
 	"model_bss/internal/domain/cost"
 	"model_bss/internal/domain/customer"
 	"model_bss/internal/domain/model"
+	"model_bss/internal/domain/openapi"
 	"model_bss/internal/domain/price"
 	"model_bss/internal/domain/pricing"
 	"model_bss/internal/domain/supplier"
@@ -29,26 +30,27 @@ import (
 
 // Deps 是路由装配所需的全部依赖。
 type Deps struct {
-	Config            *config.Config
-	Log               *zap.Logger
-	Health            Pinger
-	AuthService       *auth.Service
-	SessionReader     auth.SessionReader
-	IdemStore         middleware.IdempotencyStore
-	ModelSvc          *model.Service
-	SupplierSvc       *supplier.Service
-	SupplierQuoteSvc  *supplier.QuoteService
-	SupplierImportSvc *supplier.ImportService
-	QuoteApproveSvc   *supplier.ApproveService
-	QuoteLifecycleSvc *supplier.LifecycleService
-	CostReadSvc       *cost.ReadService
-	CostParamSvc      *cost.ParamService
-	CostLockSvc       *cost.LockService
-	CostCompareSvc    *cost.CompareService
-	PriceSyncSvc      *price.SyncService
-	PriceConfirmSvc   *price.ConfirmService
-	PricingSvc        *pricing.PricingService
-	PricingPublishSvc *pricing.PublishService
+	Config             *config.Config
+	Log                *zap.Logger
+	Health             Pinger
+	AuthService        *auth.Service
+	SessionReader      auth.SessionReader
+	IdemStore          middleware.IdempotencyStore
+	ModelSvc           *model.Service
+	SupplierSvc        *supplier.Service
+	SupplierProfileSvc *supplier.ProfileService
+	SupplierQuoteSvc   *supplier.QuoteService
+	SupplierImportSvc  *supplier.ImportService
+	QuoteApproveSvc    *supplier.ApproveService
+	QuoteLifecycleSvc  *supplier.LifecycleService
+	CostReadSvc        *cost.ReadService
+	CostParamSvc       *cost.ParamService
+	CostLockSvc        *cost.LockService
+	CostCompareSvc     *cost.CompareService
+	PriceSyncSvc       *price.SyncService
+	PriceConfirmSvc    *price.ConfirmService
+	PricingSvc         *pricing.PricingService
+	PricingPublishSvc  *pricing.PublishService
 	// 阶段 8b-2：涨价传导决策队列（08-pricing.md §5）。
 	PricingUpconductionSvc *pricing.UpconductionService
 	// 阶段 9a：客户域（09-customer-quote.md §1/§2）。
@@ -64,6 +66,9 @@ type Deps struct {
 	// 阶段 10b：告警处理 + 审计日志（10-workbench-audit.md §4/§5）。
 	AlertSvc *workbench.AlertService
 	AuditSvc *workbench.AuditService
+	// 阶段 11a：开放接口（11-open-api.md §1/§2）。
+	OpenApiSvc     *openapi.Service
+	OpenTokenStore middleware.OpenTokenStore
 }
 
 // New 构建并返回应用使用的 Gin Engine。
@@ -88,7 +93,7 @@ func New(deps Deps) *gin.Engine {
 	}
 
 	api := r.Group("/api")
-	for _, portal := range []string{"internal", "supplier", "customer"} {
+	for _, portal := range []string{"internal", "supplier", "customer", "open"} {
 		registerPortal(api, portal, deps)
 	}
 
@@ -98,6 +103,30 @@ func New(deps Deps) *gin.Engine {
 // registerPortal 注册单个门户的公开路由与受保护路由。
 func registerPortal(api *gin.RouterGroup, portal string, deps Deps) {
 	g := api.Group("/" + portal)
+
+	// ---- 开放接口（11a）：独立鉴权，不挂 AuthN/RequirePerm/Idempotency ----
+	if portal == "open" {
+		// 公开路由：POST /auth/token（client_id+secret 换 token）
+		if deps.OpenApiSvc != nil {
+			h := NewOpenApiHandler(deps.OpenApiSvc)
+			g.POST("/auth/token", h.IssueToken)
+		}
+		// 受保护路由：OpenAuthN（校验 open_api_token）
+		protected := g.Group("")
+		if deps.OpenTokenStore != nil {
+			protected.Use(middleware.OpenAuthN(deps.OpenTokenStore))
+		}
+		if deps.OpenApiSvc != nil {
+			h := NewOpenApiHandler(deps.OpenApiSvc)
+			protected.GET("/aliases", h.GetAliases)
+			protected.GET("/sellable-models", h.GetSellableModels)
+			protected.GET("/routing/:sku", h.GetRouting)
+			protected.GET("/price-book", h.GetPriceBook)
+			protected.GET("/cost-snapshot", h.GetCostSnapshot)
+			protected.GET("/events", h.PullEvents)
+		}
+		return
+	}
 
 	// ---- 公开路由（不经过 AuthN） ----
 	authGroup := g.Group("/auth")
@@ -161,6 +190,31 @@ func registerPortal(api *gin.RouterGroup, portal string, deps Deps) {
 			middleware.Idempotency(deps.IdemStore, middleware.DefaultBizKey),
 			h.DecideApproval,
 		)
+
+		// 变更单与审批进度只读查询（联调 P1-4 / P1-5）。
+		// 官方价变更单（PRICE_UP/PRICE_DOWN）与价目表发布（PRICE_BOOK_PUBLISH/ROLLBACK）
+		// 统一走这里；不挂模块权限点——与审批动作同口径（审批权由 required_role 决定）。
+		crh := NewChangeRequestHandler(deps.ModelSvc)
+		protected.GET("/change-requests", crh.ListChangeRequests)
+		protected.GET("/change-requests/:id", crh.GetChangeRequest)
+	}
+
+	// 业务接口：新模型申请审核（内部侧，属 M1 模型主数据域）。
+	// 契约：设计文档 §8.5 接口清单；状态机 SUBMITTED → APPROVED/MERGED/REJECTED。
+	if portal == "internal" && deps.SupplierSvc != nil {
+		mah := NewModelApplicationHandler(deps.SupplierSvc)
+		protected.GET("/model-applications",
+			middleware.RequirePerm(perm.M1View), mah.ListApplications)
+		protected.POST("/model-applications/:id/decision",
+			middleware.RequirePerm(perm.M1Edit),
+			middleware.Idempotency(deps.IdemStore, middleware.DefaultBizKey),
+			mah.DecideApplication,
+		)
+	}
+	if portal == "internal" && deps.SupplierProfileSvc != nil {
+		sph := NewSupplierProfileHandler(deps.SupplierProfileSvc)
+		protected.GET("/suppliers", middleware.RequirePerm(perm.M3View), sph.ListProfiles)
+		protected.GET("/suppliers/:id", middleware.RequirePerm(perm.M3View), sph.GetProfile)
 	}
 
 	// 业务接口：成本基线只读（06-cost.md §2/§3，内部 M5:V）。
@@ -299,6 +353,10 @@ func registerPortal(api *gin.RouterGroup, portal string, deps Deps) {
 			middleware.RequirePerm(perm.M8View),
 			ch.ListCustomers,
 		)
+		protected.GET("/customers/:id/quote-context",
+			middleware.RequirePerm(perm.M9View),
+			ch.GetQuoteContext,
+		)
 		protected.POST("/customers/:id/transfer",
 			middleware.RequirePerm(perm.M8Edit),
 			middleware.Idempotency(deps.IdemStore, middleware.DefaultBizKey),
@@ -396,6 +454,16 @@ func registerPortal(api *gin.RouterGroup, portal string, deps Deps) {
 				middleware.Idempotency(deps.IdemStore, middleware.DefaultBizKey),
 				ih.ConfirmQuoteImport,
 			)
+		}
+		// 新模型申请（供应商侧）：提交挂幂等；查询走行级过滤（仅本主体）。
+		// 契约：设计文档 §8.5 接口清单 POST/GET /api/supplier/model-applications。
+		{
+			ah := NewSupplierApplicationHandler(deps.SupplierSvc)
+			protected.POST("/model-applications",
+				middleware.Idempotency(deps.IdemStore, middleware.DefaultBizKey),
+				ah.SubmitApplication,
+			)
+			protected.GET("/model-applications", ah.ListApplications)
 		}
 	}
 

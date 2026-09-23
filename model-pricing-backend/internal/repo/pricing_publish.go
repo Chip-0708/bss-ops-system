@@ -19,7 +19,7 @@ import (
 //
 // 事务纪律（红线 3/8）：
 //   - Publish 单事务：change_request + 2 步 approval_step + 草稿 DRAFT → APPROVING。
-//   - ApplyPriceBookPublish 单事务 5 连写：草稿 APPROVING → EFFECTIVE（原地升格）+
+//   - ApplyPriceBookPublish 单事务 5 连写：旧版先 RETIRED，草稿再 APPROVING → EFFECTIVE +
 //     旧版 EFFECTIVE → RETIRED + valid_to + event_outbox('price.effective') +
 //     cache_version('price_book')+1 + audit_log('PRICE_BOOK_PUBLISH')。
 //     由 DecideApproval 全步 APPROVED 时回调触发（同事务，与审批状态推进一致）。
@@ -342,7 +342,7 @@ func (r *PricingPublishRepo) ApplyPriceBookPublish(ctx context.Context, p pricin
 	now := time.Now().UTC()
 
 	return r.txOf(ctx).Transaction(func(tx *gorm.DB) error {
-		// 1. 草稿 APPROVING → EFFECTIVE（原地升格，version_no 不变）。
+		// 1. 校验待生效草稿。旧版必须先退役，否则会撞 uk_pb_effective。
 		var book priceBookRow
 		if err := tx.Where("id = ?", payload.PriceBookID).Take(&book).Error; err != nil {
 			return fmt.Errorf("load price_book %d: %w", payload.PriceBookID, err)
@@ -350,17 +350,6 @@ func (r *PricingPublishRepo) ApplyPriceBookPublish(ctx context.Context, p pricin
 		if book.Status != pricing.BookStatusApproving {
 			return fmt.Errorf("price_book %d status=%s, expect APPROVING", payload.PriceBookID, book.Status)
 		}
-		if err := tx.Model(&priceBookRow{}).Where("id = ?", book.ID).
-			Updates(map[string]any{
-				"status":         pricing.BookStatusEffective,
-				"effective_time": effectiveTime,
-				"updated_at":     now,
-				"updated_by":     p.OperatorID,
-				"request_id":     p.RequestID,
-			}).Error; err != nil {
-			return fmt.Errorf("update price_book to EFFECTIVE: %w", err)
-		}
-
 		// 2. 旧版本（当前 EFFECTIVE 的）→ RETIRED + valid_to = effective_time。
 		// 注意：回滚时，当前 EFFECTIVE 是被回滚的版本；发布时，当前 EFFECTIVE 是上一版。
 		var oldEffective priceBookRow
@@ -380,6 +369,13 @@ func (r *PricingPublishRepo) ApplyPriceBookPublish(ctx context.Context, p pricin
 			}
 		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return fmt.Errorf("load old effective: %w", err)
+		}
+		if err := tx.Model(&priceBookRow{}).Where("id = ? AND status = ?", book.ID, pricing.BookStatusApproving).
+			Updates(map[string]any{
+				"status": pricing.BookStatusEffective, "effective_time": effectiveTime,
+				"updated_at": now, "updated_by": p.OperatorID, "request_id": p.RequestID,
+			}).Error; err != nil {
+			return fmt.Errorf("update price_book to EFFECTIVE: %w", err)
 		}
 
 		// 3. event_outbox('price.effective')。

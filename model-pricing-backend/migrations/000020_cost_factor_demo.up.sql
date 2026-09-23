@@ -26,17 +26,14 @@ DO $$
 DECLARE
   new_item_id bigint;
 BEGIN
-  -- 该迁移只补已有演示报价；全新库没有报价夹具时安全跳过，不能阻断建库。
-  IF NOT EXISTS (SELECT 1 FROM quote_item WHERE id = 39 AND quote_sheet_id = 27 AND sku_id = 40) THEN
-    RAISE NOTICE '000020：未找到成本因子演示报价，跳过可选装置';
-    RETURN;
-  END IF;
-
   -- 步骤 1：供应商 1 的当前 EFFECTIVE 明细补配额约束
   UPDATE quote_item
      SET constraints_ = '{"rpm":3000,"tpm":2000000,"concurrency":64}'::jsonb,
          updated_at   = now()
    WHERE id = 39 AND quote_sheet_id = 27 AND sku_id = 40;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION '000020 装置前提破坏：quote_item id=39 (sheet 27 / sku 40) 不存在，中止';
+  END IF;
 
   -- 步骤 2：supplier 2 的 EFFECTIVE 单 sheet 29 下新增 sku40 明细（RESTRICT 违反 = 重复执行，幂等跳过）
   INSERT INTO quote_item(quote_sheet_id, sku_id, currency, constraints_, created_by, updated_by)

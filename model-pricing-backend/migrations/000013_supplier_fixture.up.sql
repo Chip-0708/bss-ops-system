@@ -13,11 +13,15 @@ DECLARE
   staff_b bigint;
 BEGIN
   -- 组织（取第一个 org_unit）
+  -- 兜底：000007_seed 已种根组织，但若该表被清空（或本迁移被单独重放），
+  -- 这里必须自建一行，否则 internal_staff.org_unit_id 非空约束会直接失败。
   SELECT id INTO org_id FROM org_unit ORDER BY id LIMIT 1;
   IF org_id IS NULL THEN
-    INSERT INTO org_unit(name, unit_type, path, status, updated_at, request_id, created_by, updated_by)
-    VALUES ('开发组织','COMPANY','/dev/','ACTIVE',now(),NULL,1,1)
+    INSERT INTO org_unit(parent_id, name, unit_type, path, status, created_at, updated_at, request_id, created_by, updated_by)
+    VALUES (NULL, '总部', 'COMPANY', '/', 'ACTIVE', now(), now(), NULL, 1, 1)
     RETURNING id INTO org_id;
+    UPDATE org_unit SET path = '/' || org_id || '/' WHERE id = org_id;
+    RAISE NOTICE '000013 兜底：org_unit 为空，已建根组织 id=%', org_id;
   END IF;
 
   -- legal_subject ×2（公司主体，USCC 唯一）

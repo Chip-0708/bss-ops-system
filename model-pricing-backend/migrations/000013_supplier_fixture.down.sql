@@ -10,6 +10,3 @@ DELETE FROM supplier_profile WHERE subject_id IN (
 DELETE FROM subject_operator WHERE mobile IN ('13800000001','13800000002');
 DELETE FROM internal_staff WHERE mobile IN ('13800000011','13800000012');
 DELETE FROM legal_subject WHERE uscc IN ('91310000MA1FL0Q23X','91310000MA1FL0Q24Y');
-DELETE FROM org_unit
-WHERE name = '开发组织' AND path = '/dev/'
-  AND NOT EXISTS (SELECT 1 FROM internal_staff WHERE org_unit_id = org_unit.id);

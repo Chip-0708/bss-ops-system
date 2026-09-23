@@ -120,7 +120,14 @@ func (h *CustomerPortalHandler) ListQuotes(c *gin.Context) {
 		return
 	}
 	page, size := parsePageQuery(c)
-	res, err := h.portalSvc.ListQuotes(c.Request.Context(), customerID, customer.PortalQuoteQuery{Page: page, Size: size})
+	// 联调 P1-8：服务端类别筛选与状态筛选（此前只支持 page/size，前端只能过滤当前页，
+	// 导致空页/错误总数）。kind 空值 = 两者都查（兼容旧调用）；QUOTE / CONTRACT = 只查该类。
+	res, err := h.portalSvc.ListQuotes(c.Request.Context(), customerID, customer.PortalQuoteQuery{
+		Page:   page,
+		Size:   size,
+		Kind:   c.Query("kind"),
+		Status: c.Query("status"),
+	})
 	if err != nil {
 		response.Error(c, portalErrToAppErr(err))
 		return

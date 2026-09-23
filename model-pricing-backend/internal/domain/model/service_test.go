@@ -124,6 +124,24 @@ func (f *fakeModelStore) LoadChangeType(ctx context.Context, changeRequestID int
 	return "", ErrNotFound
 }
 
+// ListChangeRequests 变更单列表（fake：返回空列表——聚合逻辑在 repo 层，domain 单测
+// 只验证接口可调用与分页默认值由 Service 兜底）。
+func (f *fakeModelStore) ListChangeRequests(_ context.Context, q ChangeRequestQuery) (*ChangeRequestListResult, error) {
+	return &ChangeRequestListResult{List: []ChangeRequestItem{}, Page: q.Page, Size: q.Size}, nil
+}
+
+// GetChangeRequest 变更单详情（fake：从 crs 取；不存在返回 ErrNotFound）。
+func (f *fakeModelStore) GetChangeRequest(_ context.Context, id int64) (*ChangeRequestDetail, error) {
+	cr, ok := f.crs[id]
+	if !ok {
+		return nil, ErrNotFound
+	}
+	return &ChangeRequestDetail{
+		ChangeRequestItem: ChangeRequestItem{ChangeType: cr.ChangeType},
+		Steps:             []ApprovalStepView{},
+	}, nil
+}
+
 // DecideApproval 审批动作（fake：角色匹配 + 禁止自审 + 状态机）。
 // onApproved 全步 APPROVED 时回调（fake 忽略——真实回调在 repo 层，单测不覆盖）。
 func (f *fakeModelStore) DecideApproval(ctx context.Context, changeRequestID int64, in DecisionInput, operatorID int64, roles []string, requestID string, onApproved func(context.Context, int64, int64, string) error) (*DecisionResult, error) {

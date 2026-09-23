@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 
 	"model_bss/internal/domain/model"
+	"model_bss/internal/infra/db"
 )
 
 // deprecationImpactRow 是 deprecation_impact 表的行模型（列名 impact_refs 规避 SQL 保留字）。
@@ -272,7 +273,30 @@ func (r *ModelRepo) LoadChangePayload(ctx context.Context, changeRequestID int64
 // onApproved 全步 APPROVED 时回调（7b：PRICE_UP/PRICE_DOWN 注入生效连锁；退役传 nil）。
 // biz_type 从 change_request.change_type 读（不再硬编码 "DEPRECATE"）——approval_step.biz_type
 // 与 change_request.change_type 同值（DDL 注释虽写 "DEPRECATE"，实际 seed/代码均按 change_type 写入）。
+//
+// 事务边界（联调 P1-2 / 7b-②）：审批决策写入与"全步通过后的业务生效"必须原子。
+//   - 幂等中间件已注入事务时（路由 /approvals/:id/decision 挂了幂等）直接复用；
+//   - 未注入时自行开启，避免逐条自动提交留下
+//     "change_request=APPROVED 但生效连锁未完成"的静默脏态。
 func (r *ModelRepo) DecideApproval(ctx context.Context, changeRequestID int64, in model.DecisionInput, operatorID int64, roles []string, requestID string, onApproved func(context.Context, int64, int64, string) error) (*model.DecisionResult, error) {
+	if db.FromContext(ctx) != nil {
+		return r.decideApprovalInTx(ctx, changeRequestID, in, operatorID, roles, requestID, onApproved)
+	}
+	var res *model.DecisionResult
+	err := r.base.Transaction(func(tx *gorm.DB) error {
+		var e error
+		res, e = r.decideApprovalInTx(
+			db.WithDB(ctx, tx), changeRequestID, in, operatorID, roles, requestID, onApproved)
+		return e
+	})
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// decideApprovalInTx 是 DecideApproval 的事务内实现（要求 ctx 已绑定事务）。
+func (r *ModelRepo) decideApprovalInTx(ctx context.Context, changeRequestID int64, in model.DecisionInput, operatorID int64, roles []string, requestID string, onApproved func(context.Context, int64, int64, string) error) (*model.DecisionResult, error) {
 	tx := r.txOf(ctx)
 
 	// 先读 change_request 拿 change_type（审批步查找、全步通过后的分支都依赖它）。

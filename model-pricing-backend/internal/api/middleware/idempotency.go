@@ -184,13 +184,29 @@ func Idempotency(store IdempotencyStore, bizKey BizKeyFunc) gin.HandlerFunc {
 						c.Abort()
 						return
 					}
-					if dup != nil && dup.Status != "FAILED" {
-						if tx != nil {
-							tx.Rollback()
+					// 语义重复（biz_key 命中）：按状态区分处理，不能一律 409。
+					// 联调 P1-3：换幂等键但业务相同的请求此前会直接 409，客户端无法拿到原结果。
+					if dup != nil {
+						switch dup.Status {
+						case "DONE":
+							// 已完成 → 返回首次的原结果（重放语义）。
+							replayResult(c, dup)
+							if tx != nil {
+								tx.Rollback()
+							}
+							c.Abort()
+							return
+						case "PROCESSING":
+							// 处理中：deadline 未到 → 409（合理，避免并发双写）。
+							if tx != nil {
+								tx.Rollback()
+							}
+							response.Error(c, apperr.ErrIdempotency)
+							c.Abort()
+							return
+						default:
+							// FAILED：允许重入，继续往下走。
 						}
-						response.Error(c, apperr.ErrIdempotency)
-						c.Abort()
-						return
 					}
 				}
 			}
@@ -206,22 +222,58 @@ func Idempotency(store IdempotencyStore, bizKey BizKeyFunc) gin.HandlerFunc {
 			}
 		}
 
+		// 旁路捕获响应体（透传、不改变时序）：供下面兜底生成结果快照。
+		cap := &bodyCapture{ResponseWriter: c.Writer}
+		c.Writer = cap
+
 		// 执行业务
 		c.Next()
 
+		// 兜底：handler 未显式调用 SetIdempotencyResult 时，从响应体提取 data，
+		// 保证 DONE 记录一定有可重放的快照（联调 P1-3）。
+		if GetIdempotencyResult(c) == nil {
+			if data, ok := cap.capturedData(); ok {
+				SetIdempotencyResult(c, data)
+			}
+		}
+
 		// 写回结果：由 handler 侧通过 c.JSON 写出的响应体回读。
+		// 注意：此处 handler 已写出响应体，**不能再覆盖**（gin 会告警 headers already written，
+		// 且前端会看到与落库不一致的结果——联调 P1-1 的"结果未知"即源于此）。
+		// 失败时只回滚事务 + 记录错误，让下一次同 key 重试能拿到干净状态。
 		if err := store.MarkResult(c, requestID, c.Writer.Status()); err != nil {
 			if tx != nil {
 				tx.Rollback()
 			}
-			response.Error(c, apperr.ErrSystem)
-			c.Abort()
+			_ = c.Error(fmt.Errorf("idempotency mark result failed (request_id=%s): %w", requestID, err))
+			if !c.Writer.Written() {
+				response.Error(c, apperr.ErrSystem)
+				c.Abort()
+			}
 			return
 		}
 		if tx != nil {
-			tx.Commit()
+			// commit 失败必须显式处理：此前完全静默，会导致
+			// "响应 200 但业务实际回滚"的最坏情况（联调 P1-1 排查点之一）。
+			if err := tx.Commit().Error; err != nil {
+				_ = c.Error(fmt.Errorf("idempotency commit failed (request_id=%s): %w", requestID, err))
+				markFailedBestEffort(store, requestID)
+				return
+			}
 		}
 	}
+}
+
+// markFailedBestEffort 在事务已不可用时，用独立连接把幂等记录标为 FAILED，
+// 使客户端换同 key 重试时不被"看似 DONE"的记录挡住。失败只记录、不掩盖原错误。
+func markFailedBestEffort(store IdempotencyStore, requestID string) {
+	base := store.DB()
+	if base == nil {
+		return
+	}
+	_ = base.Table("idempotency_key").
+		Where("request_id = ? AND status = 'PROCESSING'", requestID).
+		Updates(map[string]any{"status": "FAILED", "processing_deadline": nil, "updated_at": time.Now()}).Error
 }
 
 // SetIdempotencyResult 由 handler 在返回前调用，把本次响应的 data 挂到幂等记录上。
@@ -298,14 +350,64 @@ func replayResult(c *gin.Context, row *IdempotencyRow) {
 	}
 	c.Header("X-Request-Id", rid)
 
+	// 无快照（历史数据 / 旧版本写入的记录）：不静默返回 data:null——
+	// 客户端无法区分"业务结果为空"与"没有快照"，会误判业务未生效而重复提交。
+	// 新写入路径已由 bodyCapture 兜底保证有快照，此处仅兜历史数据。
+	if len(row.ResultJSON) == 0 {
+		response.Error(c, apperr.ErrIdempotency)
+		return
+	}
+
 	var data interface{}
-	if len(row.ResultJSON) > 0 {
-		if err := json.Unmarshal(row.ResultJSON, &data); err != nil {
-			// 反序列化失败时原样透传，避免把坏数据包装成"成功"
-			data = json.RawMessage(row.ResultJSON)
-		}
+	if err := json.Unmarshal(row.ResultJSON, &data); err != nil {
+		// 反序列化失败时原样透传，避免把坏数据包装成"成功"
+		data = json.RawMessage(row.ResultJSON)
 	}
 	response.Success(c, data)
+}
+
+// bodyCapture 旁路捕获响应体（透传写入、不改变时序），
+// 供幂等中间件在 handler 未显式调用 SetIdempotencyResult 时兜底生成结果快照。
+//
+// 联调 P1-3：此前 DONE 记录可能 result_json=NULL，重放会拿到 data:null，
+// 客户端无法判断"业务结果为空"还是"没有快照"。
+type bodyCapture struct {
+	gin.ResponseWriter
+	body bytes.Buffer
+}
+
+func (w *bodyCapture) Write(b []byte) (int, error) {
+	w.body.Write(b)
+	return w.ResponseWriter.Write(b)
+}
+
+func (w *bodyCapture) WriteString(s string) (int, error) {
+	w.body.WriteString(s)
+	return w.ResponseWriter.WriteString(s)
+}
+
+// capturedData 从捕获的统一响应信封中取出 data 字段。
+// 要求：响应体是统一信封（code 字段存在且为 0）且 data 非空——否则返回 ok=false，
+// 由调用方保持原语义（避免把裸 JSON 响应误判成业务成功快照）。
+func (w *bodyCapture) capturedData() (any, bool) {
+	if w.body.Len() == 0 {
+		return nil, false
+	}
+	var env struct {
+		Code *int            `json:"code"`
+		Data json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(w.body.Bytes(), &env); err != nil {
+		return nil, false
+	}
+	if env.Code == nil || *env.Code != 0 || len(env.Data) == 0 || string(env.Data) == "null" {
+		return nil, false
+	}
+	var data any
+	if err := json.Unmarshal(env.Data, &data); err != nil {
+		return nil, false
+	}
+	return data, true
 }
 
 // ctxKeyIdemResult 是 handler 写入、中间件读取的响应快照键。

@@ -69,6 +69,9 @@ type PortalQuoteItem struct {
 	SourceKind   string     `json:"source_kind"` // QUOTE / CONTRACT（customer_price_book 行）
 	ContractFrom *time.Time `json:"contract_from,omitempty"`
 	ContractTo   *time.Time `json:"contract_to,omitempty"`
+	// CanAccept 报价是否可被接受（联调 P1-8：前端不能只靠 status 猜）。
+	// 仅 QUOTE 有意义：APPROVED（或特价已批）且未过 valid_until；CONTRACT 恒为 false。
+	CanAccept bool `json:"can_accept"`
 }
 
 // PortalQuoteListResult 报价与合同联合列表。
@@ -80,9 +83,15 @@ type PortalQuoteListResult struct {
 }
 
 // PortalQuoteQuery 报价查询。
+//
+// Kind 限定类别：空 = 两者都查（各自分页后合并）；QUOTE / CONTRACT = 只查该类。
+// 联调 P1-8：此前合同部分**不分页且全量返回**，而 total 用的是「报价分页 count +
+// 合同全量行数」，与 list 长度语义不一致 → 前端只过滤当前页时出现空页/错误总数。
 type PortalQuoteQuery struct {
-	Page int
-	Size int
+	Page   int
+	Size   int
+	Kind   string // "" / QUOTE / CONTRACT
+	Status string // 可选：按报价状态筛选（仅对 QUOTE 生效）
 }
 
 // PortalAcceptResult 接受报价的结果。
@@ -228,6 +237,24 @@ func (s *PortalService) ListQuotes(ctx context.Context, customerID int64, q Port
 	return s.store.ListPortalQuotes(ctx, customerID, q)
 }
 
+// isQuoteApproved 报价是否已获批：APPROVED，或特价单 special_price_status='APPROVED'
+// （特价单的 status 可能仍是 DRAFT，靠 sps 表达"可接受"）。
+func isQuoteApproved(status string, specialPriceStatus *string) bool {
+	return status != QuoteStatusEffective &&
+		(status == QuoteStatusApproved || specialPriceStatus != nil && *specialPriceStatus == SpecialPriceApproved)
+}
+
+// CanAcceptQuote 报价是否可被客户接受 = 已获批 且 未过期。
+//
+// 联调 P1-8：客户 Portal 列表需要权威的 can_accept，前端不能只靠 status 猜。
+// 口径与 AcceptQuote 的校验链**同源**——否则会出现"列表显示可接受、点击却 409"。
+func CanAcceptQuote(status string, specialPriceStatus *string, validUntil *time.Time, now time.Time) bool {
+	if !isQuoteApproved(status, specialPriceStatus) {
+		return false
+	}
+	return validUntil == nil || !now.After(*validUntil)
+}
+
 // AcceptQuote 接受报价 → 转合同价（幂等）。
 //
 // 校验链（任一失败即返回对应错误）：
@@ -242,12 +269,8 @@ func (s *PortalService) AcceptQuote(ctx context.Context, quoteID, customerID int
 	if quote == nil || quote.CustomerID != customerID {
 		return nil, ErrPortalQuoteNotFound
 	}
-	// 状态校验：APPROVED 或 special_price_status='APPROVED'（特价单 status 可能是 DRAFT 但 special_price_status=APPROVED）。
-	isApproved := quote.Status == QuoteStatusApproved
-	if quote.SpecialPriceStatus != nil && *quote.SpecialPriceStatus == SpecialPriceApproved {
-		isApproved = true
-	}
-	if !isApproved {
+	// 状态校验（与 CanAcceptQuote 同源，见上）。
+	if !isQuoteApproved(quote.Status, quote.SpecialPriceStatus) {
 		return nil, ErrPortalQuoteNotApprovable
 	}
 	// 过期校验（只对 TEMP 报价；APPLY/CLONE 无 valid_until）。

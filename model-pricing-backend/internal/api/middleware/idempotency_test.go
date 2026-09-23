@@ -15,6 +15,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
+
+	"model_bss/pkg/response"
 )
 
 // fakeIdemStore 为单测的内存幂等存储。
@@ -78,6 +80,13 @@ func (f *fakeIdemStore) MarkResult(c *gin.Context, requestID string, httpStatus 
 	row.HTTPStatus = httpStatus
 	if httpStatus >= 200 && httpStatus < 300 {
 		row.Status = "DONE"
+		// 与真实实现（repo.IdempotencyRepo.MarkResult）一致：保存可重放的响应快照。
+		// 中间件的 bodyCapture 兜底会把未显式挂的结果也填进来，故此处与生产行为同构。
+		if v := GetIdempotencyResult(c); v != nil {
+			if b, err := json.Marshal(v); err == nil {
+				row.ResultJSON = b
+			}
+		}
 	} else {
 		row.Status = "FAILED"
 	}
@@ -240,20 +249,82 @@ func TestIdempotency_ProcessingExpiredAllowsReentry(t *testing.T) {
 	require.True(t, row.Deadline.After(time.Now()), "deadline must be reset forward")
 }
 
-func TestIdempotency_SameBizKeyDifferentRequestIDReturns409(t *testing.T) {
+// 联调 P1-3：语义重复（同 biz_key、不同 request_id）在 DONE 且**有快照**时，
+// 必须返回首次的原结果，而不是 409——客户端换幂等键重试不应被挡。
+func TestIdempotency_SameBizKeyDoneWithSnapshotReplays(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	store := newFakeIdemStore()
-	// 模拟 Agent 重试：相同 biz_key、不同 request_id
-	store.byBizKey["bk-1"] = &IdempotencyRow{RequestID: "old-req", Status: "DONE", BizKey: "bk-1"}
+	store.byBizKey["bk-1"] = &IdempotencyRow{
+		RequestID: "old-req", Status: "DONE", BizKey: "bk-1",
+		ResultJSON: []byte(`{"quote_id":7,"new_status":"EFFECTIVE"}`),
+	}
 
+	var handlerRan bool
 	rec := performIdemRequest(t, store, func(c *gin.Context) string {
 		return "bk-1"
 	}, func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"ok": true})
+		handlerRan = true
+		c.JSON(http.StatusOK, gin.H{"should": "not run"})
 	}, "new-req", `{"a":1}`)
 
+	require.Equal(t, http.StatusOK, rec.Code, "DONE+biz_key 命中应重放原结果，不是 409")
+	require.False(t, handlerRan, "重放不应再次执行业务")
+	require.Contains(t, rec.Body.String(), "quote_id", "应返回首次结果的快照")
+	require.Contains(t, rec.Body.String(), "EFFECTIVE")
+}
+
+// 联调 P1-3：DONE 但无快照（历史数据）→ 明确 409，不静默返回 data:null。
+func TestIdempotency_SameBizKeyDoneWithoutSnapshotReturns409(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	store := newFakeIdemStore()
+	store.byBizKey["bk-2"] = &IdempotencyRow{RequestID: "old-req", Status: "DONE", BizKey: "bk-2"}
+
+	rec := performIdemRequest(t, store, func(c *gin.Context) string {
+		return "bk-2"
+	}, func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	}, "new-req-2", `{"a":1}`)
+
 	require.Equal(t, http.StatusConflict, rec.Code)
-	require.Equal(t, float64(10005), bodyCodeOf(t, rec.Body.String()), "语义重复请求码 10005")
+	require.Equal(t, float64(10005), bodyCodeOf(t, rec.Body.String()),
+		"无快照不可重放，须明确报错而不是返回 data:null")
+}
+
+// 联调 P1-3：biz_key 命中 PROCESSING（未超时）→ 409，避免并发双写。
+func TestIdempotency_SameBizKeyProcessingReturns409(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	store := newFakeIdemStore()
+	dl := time.Now().Add(5 * time.Minute)
+	store.byBizKey["bk-3"] = &IdempotencyRow{
+		RequestID: "old-req", Status: "PROCESSING", BizKey: "bk-3", Deadline: &dl,
+	}
+
+	rec := performIdemRequest(t, store, func(c *gin.Context) string {
+		return "bk-3"
+	}, func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	}, "new-req-3", `{"a":1}`)
+
+	require.Equal(t, http.StatusConflict, rec.Code)
+	require.Equal(t, float64(10005), bodyCodeOf(t, rec.Body.String()))
+}
+
+// 联调 P1-3：handler 未显式调用 SetIdempotencyResult 时，中间件应从响应体兜底提取快照，
+// 保证 DONE 记录可重放（此前 result_json=NULL → 重放 data:null）。
+func TestIdempotency_ResultSnapshotFallbackFromResponseBody(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	store := newFakeIdemStore()
+	rec := performIdemRequest(t, store, DefaultBizKey, func(c *gin.Context) {
+		// 故意不调 SetIdempotencyResult，直接写统一信封。
+		response.Success(c, gin.H{"id": 99})
+	}, "idem-fallback", `{"a":1}`)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	row := store.byRequest["idem-fallback"]
+	require.NotNil(t, row)
+	require.Equal(t, "DONE", row.Status)
+	require.NotEmpty(t, row.ResultJSON, "兜底应写入响应快照")
+	require.Contains(t, string(row.ResultJSON), "99")
 }
 
 func TestIdempotency_BusinessFailureMarksFailed(t *testing.T) {
@@ -333,7 +404,10 @@ func TestIdempotency_RealBodyDifferentPayloadReturns400(t *testing.T) {
 			c.Next()
 		})
 		r.Use(Idempotency(store, DefaultBizKey))
-		r.POST("/x", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"ok": true}) })
+		// 注意：handler 必须用统一响应信封（response.Success）——
+		// 幂等中间件的快照兜底依赖信封的 data 字段提取；裸 c.JSON 无法提取，
+		// 会导致 DONE 记录无快照、重放退化为 409。生产 handler 统一走 response.Success。
+		r.POST("/x", func(c *gin.Context) { response.Success(c, gin.H{"ok": true}) })
 
 		req := httptest.NewRequest(http.MethodPost, "/x", strings.NewReader(body))
 		req.Header.Set("Idempotency-Key", "idem-real")

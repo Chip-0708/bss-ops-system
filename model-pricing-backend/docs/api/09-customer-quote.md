@@ -43,6 +43,17 @@ POST /api/internal/customers/{id}/transfer
 
 ## 2. 生成客户报价
 
+### 2.1 报价创建上下文
+
+```
+GET /api/internal/customers/{id}/quote-context?page=1&size=100
+```
+
+- 权限：`M9:V`；沿用客户销售归属数据域。
+- 返回客户 `level_code`、当前 `EFFECTIVE` 价目表及 SKU 售价项，以及该客户历史报价分页列表和售价项。
+- 用于 APPLY 提交前预览及 CLONE 来源下拉；不返回成本、floor 或毛利。
+- 当前等级没有生效价目表时 `price_book=null`，历史报价仍正常返回。
+
 ```
 POST /api/internal/customer-quotes
 ```

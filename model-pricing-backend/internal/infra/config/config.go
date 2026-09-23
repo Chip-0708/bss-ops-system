@@ -41,6 +41,7 @@ type WorkerJobs struct {
 	QuoteExpireFinal JobConfig `mapstructure:"quote_expire_final"`
 	QuoteAnomalyScan JobConfig `mapstructure:"quote_anomaly_scan"`
 	CostRecalc       JobConfig `mapstructure:"cost_recalc"`
+	EventDeliver     JobConfig `mapstructure:"event_deliver"`
 }
 
 // JobConfig 是单个任务的配置。

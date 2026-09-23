@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -141,42 +142,57 @@ func (r *CustomerPortalRepo) LoadEffectivePriceBookView(ctx context.Context, lev
 func (r *CustomerPortalRepo) ListPortalQuotes(ctx context.Context, customerID int64, q customer.PortalQuoteQuery) (*customer.PortalQuoteListResult, error) {
 	offset := (q.Page - 1) * q.Size
 
+	// 类别筛选（联调 P1-8）：空 = 两者都查（各自分页后合并）；否则只查指定类别。
+	kind := strings.ToUpper(strings.TrimSpace(q.Kind))
+	wantQuote := kind == "" || kind == "QUOTE"
+	wantContract := kind == "" || kind == "CONTRACT"
+	now := time.Now()
+
 	// 报价部分：customer_quote + items count + total_amount。
 	// **行级过滤**：customer_id = ?。
 	var quoteRows []struct {
-		ID          int64      `gorm:"column:id"`
-		VersionNo   int        `gorm:"column:version_no"`
-		Status      string     `gorm:"column:status"`
-		QuoteType   string     `gorm:"column:quote_type"`
-		ValidUntil  *time.Time `gorm:"column:valid_until"`
-		ItemCount   int        `gorm:"column:item_count"`
-		TotalAmount string     `gorm:"column:total_amount"`
-		Currency    string     `gorm:"column:currency"`
+		ID                 int64      `gorm:"column:id"`
+		VersionNo          int        `gorm:"column:version_no"`
+		Status             string     `gorm:"column:status"`
+		QuoteType          string     `gorm:"column:quote_type"`
+		ValidUntil         *time.Time `gorm:"column:valid_until"`
+		ItemCount          int        `gorm:"column:item_count"`
+		TotalAmount        string     `gorm:"column:total_amount"`
+		Currency           string     `gorm:"column:currency"`
+		SpecialPriceStatus *string    `gorm:"column:special_price_status"`
 	}
-	err := r.txOf(ctx).Table("customer_quote cq").
-		Joins(`LEFT JOIN LATERAL (
+	var totalQ int64
+	if wantQuote {
+		qy := r.txOf(ctx).Table("customer_quote cq").
+			Joins(`LEFT JOIN LATERAL (
 			SELECT COUNT(*) AS cnt, COALESCE(SUM(cqi.unit_price), 0) AS total, MAX(cqi.currency) AS cur
 			FROM customer_quote_item cqi
 			WHERE cqi.customer_quote_id = cq.id
 		) agg ON true`).
-		Where("cq.customer_id = ?", customerID).
-		Select(`cq.id, cq.version_no, cq.status, cq.quote_type, cq.valid_until,
+			Where("cq.customer_id = ?", customerID)
+		if s := strings.TrimSpace(q.Status); s != "" {
+			qy = qy.Where("cq.status = ?", strings.ToUpper(s))
+		}
+		if err := qy.
+			Select(`cq.id, cq.version_no, cq.status, cq.quote_type, cq.valid_until, cq.special_price_status,
 			agg.cnt AS item_count, agg.total AS total_amount, agg.cur AS currency`).
-		Order("cq.id DESC").
-		Offset(offset).Limit(q.Size).
-		Scan(&quoteRows).Error
-	if err != nil {
-		return nil, fmt.Errorf("list quotes customer=%d: %w", customerID, err)
+			Order("cq.id DESC").
+			Offset(offset).Limit(q.Size).
+			Scan(&quoteRows).Error; err != nil {
+			return nil, fmt.Errorf("list quotes customer=%d: %w", customerID, err)
+		}
+		cnt := r.txOf(ctx).Table("customer_quote").Where("customer_id = ?", customerID)
+		if s := strings.TrimSpace(q.Status); s != "" {
+			cnt = cnt.Where("status = ?", strings.ToUpper(s))
+		}
+		if err := cnt.Count(&totalQ).Error; err != nil {
+			return nil, fmt.Errorf("count quotes: %w", err)
+		}
 	}
 
-	var totalQ int64
-	if err := r.txOf(ctx).Table("customer_quote").
-		Where("customer_id = ?", customerID).
-		Count(&totalQ).Error; err != nil {
-		return nil, fmt.Errorf("count quotes: %w", err)
-	}
-
-	// 合同部分：customer_price_book 行（按 sku_id DESC 当附加列表）。
+	// 合同部分：customer_price_book 行。
+	// 联调 P1-8：此前**不分页、全量返回**，而 total 是「报价分页 count + 合同全量行数」，
+	// 与 list 长度语义不一致 → 前端只过滤当前页时出现空页/错误总数。此处补分页与独立 count。
 	var contractRows []struct {
 		ID           int64     `gorm:"column:id"`
 		SKUID        int64     `gorm:"column:sku_id"`
@@ -185,13 +201,21 @@ func (r *CustomerPortalRepo) ListPortalQuotes(ctx context.Context, customerID in
 		ContractFrom time.Time `gorm:"column:contract_from"`
 		ContractTo   time.Time `gorm:"column:contract_to"`
 	}
-	err = r.txOf(ctx).Table("customer_price_book").
-		Where("customer_id = ?", customerID).
-		Select("id, sku_id, currency, unit_price, contract_from, contract_to").
-		Order("id DESC").
-		Scan(&contractRows).Error
-	if err != nil {
-		return nil, fmt.Errorf("list contracts customer=%d: %w", customerID, err)
+	var totalC int64
+	if wantContract {
+		if err := r.txOf(ctx).Table("customer_price_book").
+			Where("customer_id = ?", customerID).
+			Select("id, sku_id, currency, unit_price, contract_from, contract_to").
+			Order("id DESC").
+			Offset(offset).Limit(q.Size).
+			Scan(&contractRows).Error; err != nil {
+			return nil, fmt.Errorf("list contracts customer=%d: %w", customerID, err)
+		}
+		if err := r.txOf(ctx).Table("customer_price_book").
+			Where("customer_id = ?", customerID).
+			Count(&totalC).Error; err != nil {
+			return nil, fmt.Errorf("count contracts: %w", err)
+		}
 	}
 
 	list := make([]customer.PortalQuoteItem, 0, len(quoteRows)+len(contractRows))
@@ -210,6 +234,8 @@ func (r *CustomerPortalRepo) ListPortalQuotes(ctx context.Context, customerID in
 			TotalAmount: total.StringFixed(8),
 			Currency:    rw.Currency,
 			SourceKind:  "QUOTE",
+			// 联调 P1-8：权威的"可接受"标记，口径与 AcceptQuote 同源。
+			CanAccept: customer.CanAcceptQuote(rw.Status, rw.SpecialPriceStatus, rw.ValidUntil, now),
 		})
 	}
 	for _, rw := range contractRows {
@@ -234,8 +260,10 @@ func (r *CustomerPortalRepo) ListPortalQuotes(ctx context.Context, customerID in
 		})
 	}
 	return &customer.PortalQuoteListResult{
-		List:  list,
-		Total: int(totalQ) + len(contractRows),
+		List: list,
+		// 联调 P1-8：total 必须是各类别真实 count 之和（此前用合同"当页行数"，
+		// 与 list 语义不一致）。只查一类时另一类 count 为 0。
+		Total: int(totalQ) + int(totalC),
 		Page:  q.Page,
 		Size:  q.Size,
 	}, nil
@@ -314,15 +342,7 @@ func (r *CustomerPortalRepo) AcceptQuoteTx(ctx context.Context, quoteID, custome
 	err := r.txOf(ctx).Transaction(func(tx *gorm.DB) error {
 		// 1. UPDATE quote：守卫（status='APPROVED' 或 special_price_status='APPROVED'）+ 行级过滤。
 		//    注意：uk_cq_formal 是 partial unique on status='FORMAL'——'EFFECTIVE' 不冲突。
-		upd := tx.Model(&quoteRowFull{}).
-			Where("id = ? AND customer_id = ?", quoteID, customerID).
-			Where("status = 'APPROVED' OR special_price_status = 'APPROVED'").
-			Updates(map[string]any{
-				"status":     "EFFECTIVE",
-				"updated_at": now,
-				"updated_by": operatorID,
-				"request_id": requestID,
-			})
+		upd := updatePortalAcceptedQuote(tx, quoteID, customerID, operatorID, requestID, now)
 		if upd.Error != nil {
 			return fmt.Errorf("update quote status: %w", upd.Error)
 		}
@@ -386,6 +406,18 @@ func (r *CustomerPortalRepo) AcceptQuoteTx(ctx context.Context, quoteID, custome
 		return nil, err
 	}
 	return res, nil
+}
+
+func updatePortalAcceptedQuote(tx *gorm.DB, quoteID, customerID, operatorID int64, requestID string, now time.Time) *gorm.DB {
+	return tx.Model(&quoteRowFull{}).
+		Where("id = ? AND customer_id = ?", quoteID, customerID).
+		Where("status <> 'EFFECTIVE' AND (status = 'APPROVED' OR special_price_status = 'APPROVED')").
+		Updates(map[string]any{
+			"status":     "EFFECTIVE",
+			"updated_at": now,
+			"updated_by": operatorID,
+			"request_id": requestID,
+		})
 }
 
 // ------------------------------------------------------------

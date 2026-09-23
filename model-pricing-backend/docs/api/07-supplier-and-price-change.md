@@ -1,14 +1,11 @@
 # 供应商管理 M3 + 官方价变更 B（内部门户）
 
-> **状态：§5/§6 已实现（阶段 7a）；§1-3 与 §7-9 未实现。**
+> **状态：§1 与 §2 的 GET、§5/§6 已实现；§2 的 PUT、§3 与 §7-9 未实现。**
 > 依据：设计 §8.6 / §2.4 / §11 时序图、需求 §6。
 > 通用约定见 `README.md`。
 
-> ⚠️ **本节 1–3 是「缺口补录」，不是阶段 7 的原计划。**
-> 设计 §8.6 定义了供应商管理 M3 的内部接口，但**代码里一个都没实现**
-> （`grep suppliers internal/api/router.go` 零命中）。
-> 也就是说现在**没法在内部增删改供应商，也没法移交归属**，供应商只能靠 migration 种子造。
-> 前端对接前必须先决定：补实现，还是明确砍掉。
+> §1 与 §2 的 GET 为只读查询；内部增删改和移交归属仍未实现。
+> `settlement_currency` 由 `000028_supplier_settlement_currency` 新增，既有档案默认 CNY，约束为 CNY/USD。
 
 ---
 
@@ -25,13 +22,19 @@ GET /api/internal/suppliers?page=1&size=20&keyword=&qual_status=&status=
 
 | 字段 | 说明 |
 |---|---|
-| `id` / `legal_name` | 供应商档案与法人主体名称 |
+| `id` / `subject_id` / `legal_name` | 供应商档案与法人主体 |
+| `settlement_currency` | 结算币种（CNY/USD） |
 | `qual_status` | `VALID` / `EXPIRING` / `FROZEN` |
 | `settle_status` | 结算状态 |
 | `status` | `ACTIVE` / `INACTIVE` |
 | `owner_procurement_name` | 归属采购 |
-| `sku_count` / `effective_quote_count` | 在供模型数 / 有效报价数 |
-| `expiring_soon` | 30 天内到期的报价数 |
+| `owner_procurement_operator_id` | 归属采购员工 ID |
+| `sku_count` / `effective_quote_count` | 当前 EFFECTIVE 且在有效时间内的报价去重 SKU 数 / 报价单数 |
+| `expiring_soon` | 30 天内到期的 EFFECTIVE 报价单数 |
+| `updated_at` | 档案更新时间 |
+
+分页响应还包含 `total`、`page`、`size`；`page<1` 规整为 1，`size` 不在 1–100 时规整为 20。
+`keyword` 按法人名称模糊匹配，`qual_status`、`status` 精确匹配。
 
 ## 2. 供应商档案与商务信息
 
@@ -41,7 +44,16 @@ PUT /api/internal/suppliers/{id}
 ```
 
 - 权限：`M3:V` / `M3:E`。
-- **字段剔除**：商务字段（付款方式、授信额度、押金）对**非财务、非归属采购**的角色剔除。
+- GET 已实现；供应商不存在返回 404，存在但不在当前数据域内返回 403。详情返回
+  `id`、`subject_id`、`legal_name`、`settlement_currency`、
+  `settle_type`、`billing_cycle`、`min_recharge`、`credit_line`、`credit_used`、
+  `deposit_amount`、`settle_status`、`qual_status`、
+  `owner_procurement_operator_id`、`owner_procurement_name`、`status`、
+  `created_at`、`updated_at`。金额均为 decimal 字符串。
+- GET 详情先按登录快照中的通用 `field_mask` 精确剔除响应键；
+  `settle_type`、`billing_cycle`、`min_recharge`、`credit_line`、`credit_used`、
+  `deposit_amount` 仅财务或本档案归属员工可读，其余操作员的响应中物理删除这些键。
+  归属以登录员工 ID 与 `owner_procurement_operator_id` 匹配，多角色按全部角色判定。
 - PUT 分两段权限：基础信息 `M3:E`；**结算类字段只有财务可写**，采购写了返回 `403`。
 
 ## 3. 采购资源移交

@@ -426,7 +426,7 @@ Idempotency-Key: <uuid>
 
 请求体与 §3 同构（`valid_from` / `valid_to` / `remark` / `items[]`）。
 `valid_from` / `valid_to` **不在 CSV 里**，由本请求体传入（一个文件 = 一个版本，
-生效区间必然是整单的；CSV 模板不包含这两列）。
+生效区间必然是整单的；CSV 模板里这两列仅为只读参考）。
 
 校验：
 

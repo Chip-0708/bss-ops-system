@@ -216,7 +216,10 @@ func (s *PublishService) Publish(ctx context.Context, in PublishInput, operatorI
 	}
 	payload, err := json.Marshal(map[string]any{
 		"price_book_id":  in.PriceBookID,
+		"level_code":     book.LevelCode,
+		"version_no":     book.VersionNo,
 		"sku_ids":        skuIDs,
+		"diff_report":    diffReport,
 		"effective_time": in.EffectiveTime.Format(time.RFC3339),
 		"mode":           in.Mode,
 	})

@@ -104,6 +104,29 @@ func TestCanLockFx(t *testing.T) {
 	require.False(t, CanLockFx(""), "空 role 必须拒绝")
 }
 
+func TestCanReadSupplierCommercial(t *testing.T) {
+	cases := []struct {
+		name    string
+		roles   []string
+		staffID int64
+		ownerID int64
+		want    bool
+	}{
+		{"归属采购", []string{RoleProcurement}, 7, 7, true},
+		{"归属员工无需角色特例", []string{RoleSales}, 7, 7, true},
+		{"财务在第二角色", []string{RoleSales, RoleFinance}, 8, 7, true},
+		{"非归属采购", []string{RoleProcurement}, 8, 7, false},
+		{"管理员不自动放行", []string{RolePlatformAdmin}, 8, 7, false},
+		{"空角色", nil, 8, 7, false},
+		{"空 ID 不算归属", nil, 0, 0, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.want, CanReadSupplierCommercial(tc.roles, tc.staffID, tc.ownerID))
+		})
+	}
+}
+
 func TestAnyRoleCan(t *testing.T) {
 	cases := []struct {
 		name  string

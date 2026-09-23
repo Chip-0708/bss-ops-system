@@ -11,6 +11,10 @@ import (
 type fakeSupplierStore struct {
 	byOperator map[int64]*Supplier
 	skus       []SKU
+
+	// 新模型申请（P1-6）：内存态 + 计数，供 application_test.go 使用。
+	apps      []*ModelApplication
+	nextAppID int64
 }
 
 func (f *fakeSupplierStore) FindByOperator(ctx context.Context, operatorID int64) (*Supplier, error) {
@@ -19,6 +23,54 @@ func (f *fakeSupplierStore) FindByOperator(ctx context.Context, operatorID int64
 
 func (f *fakeSupplierStore) ListSupplierSKUs(ctx context.Context, q ListSupplierSKUQuery) (*ListSupplierSKUResult, error) {
 	return &ListSupplierSKUResult{List: f.skus, Total: int64(len(f.skus)), Page: q.Page, Size: q.Size}, nil
+}
+
+// ---- 新模型申请（P1-6）----
+// 注意：fake 复刻了 repo 的两条关键语义——行级过滤与"仅 SUBMITTED 可推进"的状态守卫，
+// 使 Service 层的行为断言有意义（真实守卫在 repo 的条件更新里）。
+
+func (f *fakeSupplierStore) SubmitModelApplication(_ context.Context, supplierID int64, in SubmitApplicationInput, _ int64, _ string) (*ModelApplication, error) {
+	f.nextAppID++
+	app := &ModelApplication{
+		ID:         f.nextAppID,
+		SupplierID: supplierID,
+		ModelName:  in.ModelName,
+		VendorID:   in.VendorID,
+		Payload:    in.Payload,
+		Status:     AppStatusSubmitted,
+	}
+	f.apps = append(f.apps, app)
+	return app, nil
+}
+
+func (f *fakeSupplierStore) ListModelApplications(_ context.Context, q ApplicationQuery) (*ApplicationListResult, error) {
+	out := make([]ModelApplication, 0, len(f.apps))
+	for _, a := range f.apps {
+		if q.SupplierID != nil && a.SupplierID != *q.SupplierID {
+			continue // 行级过滤
+		}
+		if q.Status != "" && a.Status != q.Status {
+			continue
+		}
+		out = append(out, *a)
+	}
+	return &ApplicationListResult{List: out, Total: len(out), Page: q.Page, Size: q.Size}, nil
+}
+
+func (f *fakeSupplierStore) DecideModelApplication(_ context.Context, id int64, in ApplicationDecisionInput, _ int64, _ string) (*ModelApplication, error) {
+	for _, a := range f.apps {
+		if a.ID != id {
+			continue
+		}
+		if a.Status != AppStatusSubmitted {
+			return nil, ErrApplicationConflict // 终态守卫
+		}
+		a.Status = ApplicationStatusOf(in.Action)
+		a.MergedSKUID = in.TargetSKUID
+		a.RejectReason = in.Reason
+		return a, nil
+	}
+	return nil, ErrApplicationNotFound
 }
 
 func TestResolveByOperator_Hit(t *testing.T) {

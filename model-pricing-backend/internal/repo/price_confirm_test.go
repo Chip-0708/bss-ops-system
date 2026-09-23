@@ -57,11 +57,11 @@ func seedLegalSubject(t *testing.T, tx *gorm.DB, tag string) int64 {
 // owner_procurement_operator_id 使用迁移种子中的首个 internal_staff，不依赖自增 ID。
 func seedSupplierProfile(t *testing.T, tx *gorm.DB, tag string) int64 {
 	t.Helper()
-	now := time.Now().UTC()
-	subjectID := seedLegalSubject(t, tx, tag)
 	var ownerID int64
 	require.NoError(t, tx.Raw(`SELECT id FROM internal_staff ORDER BY id LIMIT 1`).Scan(&ownerID).Error)
 	require.NotZero(t, ownerID, "supplier_profile 测试需要 internal_staff 迁移种子")
+	now := time.Now().UTC()
+	subjectID := seedLegalSubject(t, tx, tag)
 	var id int64
 	require.NoError(t, tx.Raw(`INSERT INTO supplier_profile
 		(subject_id, channel_type, owner_procurement_operator_id, created_at, updated_at, created_by, updated_by)

@@ -325,7 +325,6 @@
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "customer_quote.id",
                         "name": "id",
                         "in": "path",
@@ -394,7 +393,6 @@
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "change_request ID",
                         "name": "id",
                         "in": "path",
@@ -539,6 +537,127 @@
                     },
                     "401": {
                         "description": "code=10002 未携带或非法 token",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/internal/change-requests": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "官方价变更单与价目表发布进度统一查询。type 取值：DEPRECATE / PRICE_UP / PRICE_DOWN / PRICE_BOOK_PUBLISH / PRICE_BOOK_ROLLBACK / SPECIAL_PRICE；status 取值：PENDING / APPROVED / REJECTED。返回每单的 steps_total / steps_approved / pending_step_no / pending_role。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更单"
+                ],
+                "summary": "变更单列表（含审批进度摘要）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "变更类型（空=全部）",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "状态（空=全部）",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "SKU ID（空=全部）",
+                        "name": "sku_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码（默认 1）",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页大小（默认 20，上限 200）",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "code=0；data={list,total,page,size}",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "code=10001 参数非法",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "code=10002 未认证",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/internal/change-requests/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "前端按 change_request_id 恢复审批状态（价目表发布、官方价变更均适用），不再依赖浏览器缓存。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "变更单"
+                ],
+                "summary": "变更单详情（含审批步骤链）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "change_request.id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "code=0；data=ChangeRequestDetail（含 steps[]）",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "code=10001 参数非法",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "code=10002 未认证",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "code=10004 变更单不存在",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -1048,7 +1167,6 @@
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "customer_quote.id",
                         "name": "id",
                         "in": "path",
@@ -1123,7 +1241,6 @@
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "customer_quote.id",
                         "name": "id",
                         "in": "path",
@@ -1206,7 +1323,6 @@
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "customer_quote.id",
                         "name": "id",
                         "in": "path",
@@ -1328,6 +1444,72 @@
                 }
             }
         },
+        "/api/internal/customers/{id}/quote-context": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "返回客户 level_code、当前 EFFECTIVE 价目表售价项，以及该客户历史报价及售价项。只含售价，不返回成本、floor 或毛利；执行与客户列表相同的数据域校验。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "客户报价"
+                ],
+                "summary": "客户报价上下文（M9:V；当前价目表 + 可克隆历史）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "customer_profile.id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "历史报价页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "历史报价每页（上限 200）",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "code=0；data=QuoteContext{customer_id,level_code,price_book,history}",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "code=10002 未认证",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "code=10003 无 M9:V 或客户超出数据域",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "code=10004 客户不存在",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/internal/customers/{id}/transfer": {
             "post": {
                 "security": [
@@ -1349,7 +1531,6 @@
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "customer_profile.id",
                         "name": "id",
                         "in": "path",
@@ -1412,6 +1593,152 @@
                 }
             }
         },
+        "/api/internal/model-applications": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "模型运营查看全部供应商的申请，支持按状态与供应商筛选。dup_top3 为提交时的查重候选，供审核参考。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模型申请"
+                ],
+                "summary": "模型申请列表（内部）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "状态筛选（空=全部）",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "供应商 ID（空=全部）",
+                        "name": "supplier_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码（默认 1）",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页大小（默认 20，上限 200）",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "code=0；data={list,total,page,size}",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "code=10002 未认证",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "code=10003 无 M1:V 权限",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/internal/model-applications/{id}/decision": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "APPROVE / MERGE 必须指定 target_sku_id（指向已存在的 model_sku）；REJECT 必须填 reason。仅 SUBMITTED 可审核，终态再次审核返回 10005。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模型申请"
+                ],
+                "summary": "审核模型申请",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "model_application.id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "幂等键",
+                        "name": "Idempotency-Key",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "{action, target_sku_id?, reason?}",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/supplier.ApplicationDecisionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "code=0；data=ModelApplication（status 已推进）",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "code=10001 参数非法（缺 target_sku_id / reason）",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "code=10002 未认证",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "code=10003 无 M1:E 权限",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "code=10004 申请或目标 SKU 不存在",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "code=10005 申请已终结（不可重复审核）",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/internal/models": {
             "get": {
                 "security": [
@@ -1445,14 +1772,12 @@
                     },
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "厂商筛选",
                         "name": "vendor_id",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "系列筛选",
                         "name": "family_id",
                         "in": "query"
@@ -1771,6 +2096,42 @@
                 }
             }
         },
+        "/api/internal/models/options": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "模型管理"
+                ],
+                "summary": "模型厂商与系列选项",
+                "responses": {
+                    "200": {
+                        "description": "code=0；data={vendors,families}",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "code=10002 未认证",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "code=10003 无 M1:V",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/internal/models/{id}": {
             "put": {
                 "security": [
@@ -1792,7 +2153,6 @@
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "SKU ID",
                         "name": "id",
                         "in": "path",
@@ -1863,7 +2223,6 @@
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "SKU ID",
                         "name": "id",
                         "in": "path",
@@ -1934,7 +2293,6 @@
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "SKU ID",
                         "name": "id",
                         "in": "path",
@@ -2015,7 +2373,6 @@
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "SKU ID",
                         "name": "id",
                         "in": "path",
@@ -2071,7 +2428,6 @@
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "SKU ID",
                         "name": "id",
                         "in": "path",
@@ -2210,7 +2566,6 @@
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "price_book ID",
                         "name": "id",
                         "in": "path",
@@ -2294,7 +2649,6 @@
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "price_book ID（当前生效版）",
                         "name": "id",
                         "in": "path",
@@ -2599,7 +2953,6 @@
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "队列行 id",
                         "name": "id",
                         "in": "path",
@@ -3035,7 +3388,6 @@
                     },
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "供应商筛选",
                         "name": "supplier_id",
                         "in": "query"
@@ -3212,7 +3564,6 @@
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "报价单 ID",
                         "name": "id",
                         "in": "path",
@@ -3281,7 +3632,6 @@
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "报价单 ID",
                         "name": "id",
                         "in": "path",
@@ -3362,7 +3712,6 @@
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "报价单 ID",
                         "name": "id",
                         "in": "path",
@@ -3418,7 +3767,6 @@
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "报价单 ID",
                         "name": "id",
                         "in": "path",
@@ -3499,7 +3847,6 @@
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "按采集批次过滤",
                         "name": "sync_job_id",
                         "in": "query"
@@ -3767,6 +4114,334 @@
                 }
             }
         },
+        "/api/open/aliases": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "since 为客户端已见版本号；since \u003e= version 返回空 items，否则返回全量别名（联 model_sku 拿 sku_code）。不含 cost/margin/floor_price。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "开放接口"
+                ],
+                "summary": "模型别名列表（开放接口）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "客户端已见版本号",
+                        "name": "since",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "code=0；data=AliasesResult{version,items[]}",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "code=10002 token 已过期或不存在",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/open/auth/token": {
+            "post": {
+                "description": "client_id + client_secret（sys_config 配置）换 1h 短期 token。与三大门户 login_session 完全隔离。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "开放接口"
+                ],
+                "summary": "开放接口 token 签发",
+                "parameters": [
+                    {
+                        "description": "凭证",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "client_id": {
+                                    "type": "string"
+                                },
+                                "client_secret": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "code=0；data=TokenResult{token,expires_at}",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "code=10001 参数非法",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "code=10002 client_id 或 client_secret 错误",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/open/cost-snapshot": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "返回聚合 unit_cost（代表组件完全成本），无组件明细。asOf 为空=当前版本，非空=该时刻生效版本（valid_from\u003c=asOf AND (valid_to IS NULL OR valid_to\u003easOf)）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "开放接口"
+                ],
+                "summary": "成本快照（开放接口）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "sku_id 或 sku_code",
+                        "name": "sku",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 时刻",
+                        "name": "asOf",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "code=0；data=CostSnapshotResult{sku_id,unit_cost,currency,as_of,baseline_version}",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "code=10001 sku 必填 / asOf 非法",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "code=10002 token 已过期或不存在",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "code=10004 SKU 不存在 / 暂无成本基线",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/open/events": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "30s 超时，每秒 tick 一次。since 过滤 id \u003e since；limit 默认 100 上限 100。超时返回空列表（非错误）。payload 为 jsonb 全量透传。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "开放接口"
+                ],
+                "summary": "长轮询事件（开放接口）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "客户端已见最大事件 id",
+                        "name": "since",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 100,
+                        "description": "返回上限",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "code=0；data=EventsResult{last_id,events[]}",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "code=10002 token 已过期或不存在",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/open/price-book": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "按 level_code 返回当前 EFFECTIVE 价目表（联 model_sku + 代表组件 unit_price）。不含 floor_price/unit_cost/margin/baseline。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "开放接口"
+                ],
+                "summary": "当前生效价目表（开放接口）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "价目表等级（如 GLOBAL）",
+                        "name": "level",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "code=0；data=PriceBookResult{level_code,version_no,currency,items[]}",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "code=10001 level 必填",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "code=10002 token 已过期或不存在",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "code=10004 该等级暂无生效价目表",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/open/routing/{sku}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "primary=当前成本基线主供应商（weight=100），backups=按四因子评分排序的其余供应商（weight=0）。无成本基线或无 EFFECTIVE 报价 → 404。不返回评分明细。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "开放接口"
+                ],
+                "summary": "主备路由（开放接口）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "sku_id 或 sku_code",
+                        "name": "sku",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "code=0；data=RoutingResult{sku_id,primary,backups[],currency}",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "code=10002 token 已过期或不存在",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "code=10004 SKU 不存在 / 暂无成本基线",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/open/sellable-models": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "返回 lifecycle_status IN ('PUBLISHED','PURCHASABLE') 的 SKU 列表。level_tags 从 model_sku.tags 透传（NULL→[]）。不含 cost/margin/floor_price。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "开放接口"
+                ],
+                "summary": "上架可售模型（开放接口）",
+                "responses": {
+                    "200": {
+                        "description": "code=0；data=SellableModelsResult{items[]}",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "code=10002 token 已过期或不存在",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/supplier/auth/login": {
             "post": {
                 "description": "账号密码登录。成功返回 token（明文仅在响应中出现一次，服务端只存 sha256）与权限包快照 role_snapshot。连续失败 5 次锁定 15 分钟（429）；主体冻结返回 423。",
@@ -3849,6 +4524,119 @@
                     },
                     "401": {
                         "description": "code=10002 未携带或非法 token",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/supplier/model-applications": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "行级过滤：仅返回本供应商主体的申请。支持 status 筛选（SUBMITTED/MERGED/APPROVED/REJECTED）。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "供应商-新模型申请"
+                ],
+                "summary": "我的模型申请列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "状态筛选（空=全部）",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "页码（默认 1）",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页大小（默认 20，上限 200）",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "code=0；data={list,total,page,size}",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "code=10002 未认证",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "供应商提交拟引入的新模型。payload 为自由结构（能力/上下文/模态/期望定价等）。提交时按 model_name 与已有 SKU 做相似度查重，结果落在 dup_top3 供内部审核参考（只提示不拦截）。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "供应商-新模型申请"
+                ],
+                "summary": "提交新模型申请",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "幂等键",
+                        "name": "Idempotency-Key",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "{model_name, vendor_id?, payload}",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/supplier.SubmitApplicationInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "code=0；data=ModelApplication（status=SUBMITTED）",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "code=10001 参数非法（model_name/payload 缺失或非 JSON 对象）",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "code=10002 未认证",
+                        "schema": {
+                            "$ref": "#/definitions/api.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "code=10003 非供应商主体",
                         "schema": {
                             "$ref": "#/definitions/api.APIResponse"
                         }
@@ -3964,7 +4752,6 @@
                     },
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "SKU 筛选",
                         "name": "sku_id",
                         "in": "query"
@@ -4147,14 +4934,12 @@
                     },
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "scope=vendor 时必填",
                         "name": "vendor_id",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "scope=family 时必填",
                         "name": "family_id",
                         "in": "query"
@@ -4212,7 +4997,6 @@
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "报价单 ID",
                         "name": "id",
                         "in": "path",
@@ -4285,14 +5069,12 @@
                     },
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "厂商筛选",
                         "name": "vendor_id",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "系列筛选",
                         "name": "family_id",
                         "in": "query"
@@ -5141,6 +5923,23 @@
                 }
             }
         },
+        "supplier.ApplicationDecisionInput": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "description": "APPROVE / MERGE / REJECT",
+                    "type": "string"
+                },
+                "reason": {
+                    "description": "REJECT 时必填",
+                    "type": "string"
+                },
+                "target_sku_id": {
+                    "description": "TargetSKUID APPROVE / MERGE 时必填：指向已存在的 model_sku。\n  APPROVE → 该 SKU 是为本申请新建/对应的 SKU\n  MERGE   → 被合并到的已有 SKU",
+                    "type": "integer"
+                }
+            }
+        },
         "supplier.ConfirmRemoveInput": {
             "type": "object",
             "properties": {
@@ -5192,6 +5991,9 @@
                     "type": "string"
                 }
             }
+        },
+        "supplier.SubmitApplicationInput": {
+            "type": "object"
         },
         "supplier.SubmitQuoteComponent": {
             "type": "object",

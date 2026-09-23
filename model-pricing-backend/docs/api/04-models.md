@@ -162,7 +162,7 @@ POST /api/internal/models
 | `model_type` | string | 是 | 枚举 |
 | `native_currency` | string | 是 | 3 位大写 |
 | `context_window` | int | 否 | ≥ 0 |
-| `capability` | object | 否 | 固定 key 集合，见 §0.1 |
+| `capability` | object | 否 | 结构待定 |
 | `tier_tag` | string | 否 | 枚举 |
 | `is_sensitive` | bool | 否 | 默认 false |
 | `cross_border` | bool | 否 | 默认 false |
@@ -180,7 +180,8 @@ PUT /api/internal/models/{id}
 ```
 
 - 权限点：`M1:E`
-- 与早期设计文档 §8.3 的差异：当前实现使用 `PUT /api/internal/models/{id}` 定位待维护 SKU。
+- ⚠️ **与设计文档 §8.3 的差异**：文档原文写作 `POST/PUT /api/internal/models`（不带 id），
+  PUT 无法定位资源，故此处规范为 `PUT /api/internal/models/{id}`。文档待修订。
 
 **请求体**：同创建接口字段（除 `vendor_id` / `family_id` 迁移需单独接口外均可改）；
 `lifecycle_status` **不可直接改**，须走 `publish` / `deprecate` / `batch` 流程。
@@ -194,10 +195,11 @@ PUT /api/internal/models/{id}
 
 ```
 POST /api/internal/models/{id}/aliases
-GET  /api/internal/models/aliases/suggest?keyword=xxx
+GET  /api/internal/models/{id}/aliases/suggest?keyword=xxx
 ```
 
-> 查重是独立 GET 集合路径，只传 `keyword`，不传 SKU ID；别名维护仍按 SKU ID 走 POST。
+> §8.3 原文是 `POST /api/internal/models/{id}/aliases?suggest=1`；
+> 查重是**读操作**，此处拆为独立 GET 更符合语义。文档待修订。
 
 - 权限点：`M1:E`（写） / `M1:V`（查重）
 
@@ -286,7 +288,7 @@ GET /api/internal/models/{id}/deprecation-impact
 
 | 字段 | 说明 |
 |---|---|
-| `snapshot_id` | **必存**：这是响应字段；发起退役（§8）时将其值放入请求字段 `impact_snapshot_id`，缺失 → 400。清单 24 小时有效（`expires_at`） |
+| `snapshot_id` | **必存**：发起退役（§8）时要原样回传 `impact_snapshot_id`，缺失 → 400。清单 24 小时有效（`expires_at`） |
 
 ```json
 {
@@ -333,7 +335,8 @@ POST /api/internal/models/{id}/deprecate
   "sku_id": 1001,
   "approval_id": 9001,
   "sunset_date": "2026-12-31",
-  "lifecycle_status": "PUBLISHED"
+  "lifecycle_status": "PUBLISHED",
+  "approval_status": "PENDING"
 }
 ```
 
@@ -383,7 +386,7 @@ POST /api/internal/models/{id}/deprecate
 POST /api/internal/models/{id}/publish
 ```
 
-- 权限点：`M1:E`（定价运营）｜ 幂等：**必须携带 `Idempotency-Key`**
+- 权限点：`M1:E`（定价运营）｜ 幂等：建议携带
 - 前置：`lifecycle_status = PURCHASABLE`，否则 400
 
 **请求体**：`{ "remark": "可选备注" }`
@@ -403,7 +406,7 @@ POST /api/internal/models/{id}/publish
 | # | 议题 | 结论 |
 |---|---|---|
 | 1 | `capability` 结构 | **固定 key 集合**（见 §0.1），未知 key 拒绝写入，不改成独立表 |
-| 2 | 退役影响清单 | **落库**：新增 `deprecation_impact` 表，分析接口响应返回 `snapshot_id`；发起退役请求使用 `impact_snapshot_id`，并校验清单存在且未过期 |
+| 2 | 退役影响清单 | **落库**：新增 `deprecation_impact` 表，分析接口写入并返回 `impact_snapshot_id`；发起退役时校验其存在且未过期 |
 | 3 | 批量接口上限 | 单次最多 **200** 个 SKU，超出 400 |
 | 4 | `aliases` 写接口 | **全量覆盖**语义：前端提交当前全部别名，服务端做差集增删，避免并发歧义 |
 | 5 | 上架是否需要审批 | **不需要**，定价运营直接上架（状态须为 `PURCHASABLE`） |

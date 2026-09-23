@@ -61,6 +61,11 @@ type Store interface {
 	DecideApproval(ctx context.Context, changeRequestID int64, in DecisionInput, operatorID int64, roles []string, requestID string, onApproved func(context.Context, int64, int64, string) error) (*DecisionResult, error)
 	// LoadChangeType 读 change_request.change_type（7b：通用审批入口按类型分发 onApproved）。
 	LoadChangeType(ctx context.Context, changeRequestID int64) (string, error)
+
+	// ListChangeRequests 变更单列表（含审批进度摘要）；联调 P1-4。
+	ListChangeRequests(ctx context.Context, q ChangeRequestQuery) (*ChangeRequestListResult, error)
+	// GetChangeRequest 变更单详情（含完整审批步骤链）；联调 P1-4 / P1-5。
+	GetChangeRequest(ctx context.Context, id int64) (*ChangeRequestDetail, error)
 }
 
 // ListQuery 是模型库列表查询条件。
@@ -401,6 +406,26 @@ func (s *Service) DecideApprovalByType(ctx context.Context, changeRequestID int6
 		hook = s.ApprovedHook(changeType)
 	}
 	return s.store.DecideApproval(ctx, changeRequestID, in, operatorID, roles, requestID, hook)
+}
+
+// ListChangeRequests 变更单列表（联调 P1-4：官方价变更单与价目表发布进度统一查询）。
+func (s *Service) ListChangeRequests(ctx context.Context, q ChangeRequestQuery) (*ChangeRequestListResult, error) {
+	if q.Page <= 0 {
+		q.Page = 1
+	}
+	if q.Size <= 0 || q.Size > 200 {
+		q.Size = 20
+	}
+	return s.store.ListChangeRequests(ctx, q)
+}
+
+// GetChangeRequest 变更单详情（含完整审批步骤链）。
+// 联调 P1-5：前端按 change_request_id 恢复审批状态，不再依赖浏览器缓存。
+func (s *Service) GetChangeRequest(ctx context.Context, id int64) (*ChangeRequestDetail, error) {
+	if id <= 0 {
+		return nil, ErrNotFound
+	}
+	return s.store.GetChangeRequest(ctx, id)
 }
 
 // validateCreate 创建前的字段校验。

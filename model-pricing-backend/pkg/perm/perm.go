@@ -174,6 +174,15 @@ func CanLockPrimary(roleCode string) bool { return roleCode == RoleProcurement }
 // CanLockFx 汇率锁定（fx_rate_lock）只允许 FINANCE 调用。
 func CanLockFx(roleCode string) bool { return roleCode == RoleFinance }
 
+// CanReadSupplierCommercial 供应商商务字段仅财务或档案归属采购可读。
+// 归属以登录员工 ID 与档案 owner ID 比较；空 ID 不构成归属。
+func CanReadSupplierCommercial(roleCodes []string, staffID, ownerID int64) bool {
+	if staffID > 0 && staffID == ownerID {
+		return true
+	}
+	return AnyRoleCan(roleCodes, func(role string) bool { return role == RoleFinance })
+}
+
 // AnyRoleCan 对操作员的**全部角色**做 OR 判定：任一角色满足 single 即放行。
 // 服务层二次鉴权必须用它而不是 Roles[0]——smoke_admin 的真值形状就是
 // [PLATFORM_ADMIN MODEL_OPS PRICING_OP]，只看首个角色会把合法操作员 403 掉

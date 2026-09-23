@@ -177,7 +177,7 @@ func TestPublish_Success(t *testing.T) {
 	store := newFakePublishStore()
 	diff := []DiffItem{{SKUID: 40, FloorViolation: false}}
 	diffJSON, _ := json.Marshal(diff)
-	store.books[1] = &PriceBookInfo{ID: 1, Status: BookStatusDraft, DiffReport: diffJSON}
+	store.books[1] = &PriceBookInfo{ID: 1, Status: BookStatusDraft, LevelCode: "GOLD", VersionNo: 1, DiffReport: diffJSON}
 	svc := NewPublishService(store, nil)
 	res, err := svc.Publish(context.Background(), PublishInput{
 		PriceBookID: 1, EffectiveTime: time.Now(), Mode: ModeImmediate,
@@ -190,6 +190,9 @@ func TestPublish_Success(t *testing.T) {
 	var payload map[string]any
 	require.NoError(t, json.Unmarshal(store.published.Payload, &payload))
 	require.Equal(t, float64(1), payload["price_book_id"])
+	require.Equal(t, "GOLD", payload["level_code"])
+	require.Equal(t, float64(1), payload["version_no"])
+	require.Len(t, payload["diff_report"], 1)
 	require.Equal(t, "IMMEDIATE", payload["mode"])
 }
 

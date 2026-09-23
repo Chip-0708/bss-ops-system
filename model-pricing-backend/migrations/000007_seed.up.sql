@@ -1,6 +1,23 @@
 -- 000007_seed：全部初始化数据集中在这一文件。仅在此文件里允许 ON CONFLICT DO NOTHING 幂等保护。
 -- 矩阵按设计文档 3.4 V/E/A/C/P（M1–M12 共 60 权限点）；§3.4 修正特别注明 M5 多角色共享编辑权。
 
+-- 0. 根组织（org_unit）
+--    000001 只建表未种数据，而 internal_staff.org_unit_id 是 NOT NULL，
+--    缺这一行会让 000013 建采购员工时违反非空约束（全新库必踩，此前的组织数据是手工补的）。
+--    幂等：表内已有任何组织就跳过，不覆盖既有组织树。
+DO $$
+DECLARE
+  oid bigint;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM org_unit) THEN
+    INSERT INTO org_unit(parent_id, name, unit_type, path, status, created_at, updated_at, request_id, created_by, updated_by)
+    VALUES (NULL, '总部', 'COMPANY', '/', 'ACTIVE', now(), now(), NULL, NULL, NULL)
+    RETURNING id INTO oid;
+    -- path 是物化路径，需带上自身 id（形如 /1/）
+    UPDATE org_unit SET path = '/' || oid || '/' WHERE id = oid;
+  END IF;
+END $$;
+
 -- 1. 权限点（60 行）
 INSERT INTO permission_point(module_code, action_code, name, created_by, updated_by, request_id, created_at, updated_at) VALUES
  ('M1','V','模型管理·查看',NULL,NULL,NULL,now(),now()),('M1','E','模型管理·编辑',NULL,NULL,NULL,now(),now()),('M1','A','模型管理·审批',NULL,NULL,NULL,now(),now()),('M1','C','模型管理·配置',NULL,NULL,NULL,now(),now()),('M1','P','模型管理·特权',NULL,NULL,NULL,now(),now()),

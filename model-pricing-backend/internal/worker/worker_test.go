@@ -60,7 +60,7 @@ func TestScheduler_RegisterAndStart(t *testing.T) {
 	}
 	approveSvc := supplier.NewApproveService(&fakeApproveStore{})
 	lifecycleSvc := supplier.NewLifecycleService(&fakeLifecycleStore{}, approveSvc)
-	n := RegisterJobs(s, cfg, approveSvc, lifecycleSvc, nil, nil)
+	n := RegisterJobs(s, cfg, approveSvc, lifecycleSvc, nil, nil, nil)
 	require.Equal(t, 1, n, "只有 enable=true 的 activate_quote 注册")
 
 	s.Register("test-job", func(ctx context.Context, ident supplier.JobIdentity) error {

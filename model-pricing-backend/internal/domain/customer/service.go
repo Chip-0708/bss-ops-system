@@ -185,6 +185,50 @@ type GeneratedQuote struct {
 	CreatedAt        time.Time        `json:"created_at"`
 }
 
+// QuotePreviewItem 是内部销售在提交前可查看的售价明细；不含成本、floor 或毛利。
+type QuotePreviewItem struct {
+	SKUID     int64  `json:"sku_id"`
+	SKUCode   string `json:"sku_code"`
+	Currency  string `json:"currency"`
+	UnitPrice string `json:"unit_price"`
+}
+
+// PriceBookPreview 是客户等级当前生效价目表的提交前预览。
+type PriceBookPreview struct {
+	ID        int64              `json:"id"`
+	LevelCode string             `json:"level_code"`
+	VersionNo int                `json:"version_no"`
+	Items     []QuotePreviewItem `json:"items"`
+}
+
+// QuoteHistoryPreview 是可供 CLONE 选择的本客户历史报价。
+type QuoteHistoryPreview struct {
+	ID               int64              `json:"id"`
+	VersionNo        int                `json:"version_no"`
+	Status           string             `json:"status"`
+	QuoteType        string             `json:"quote_type"`
+	ValidUntil       *time.Time         `json:"valid_until,omitempty"`
+	PriceBookVersion int                `json:"price_book_version"`
+	CreatedAt        time.Time          `json:"created_at"`
+	Items            []QuotePreviewItem `json:"items"`
+}
+
+// QuoteHistoryPage 是客户历史报价分页结果。
+type QuoteHistoryPage struct {
+	List  []QuoteHistoryPreview `json:"list"`
+	Total int64                 `json:"total"`
+	Page  int                   `json:"page"`
+	Size  int                   `json:"size"`
+}
+
+// QuoteContext 是报价创建弹窗所需的最小只读上下文。
+type QuoteContext struct {
+	CustomerID int64             `json:"customer_id"`
+	LevelCode  string            `json:"level_code"`
+	PriceBook  *PriceBookPreview `json:"price_book"`
+	History    QuoteHistoryPage  `json:"history"`
+}
+
 // ============================================================
 // 纯函数
 // ============================================================
@@ -281,6 +325,8 @@ type Store interface {
 	LoadMinGrossMargin(ctx context.Context) (decimal.Decimal, error)
 	// LoadSKUCode 读 sku_code（floor violation 响应构造）。
 	LoadSKUCode(ctx context.Context, skuID int64) (string, error)
+	// ListCustomerQuotePreviews 返回同一客户的历史报价及售价项，供 CLONE 选择和确认。
+	ListCustomerQuotePreviews(ctx context.Context, customerID int64, page, size int) (*QuoteHistoryPage, error)
 
 	// GenerateQuoteTx 单事务：INSERT customer_quote + customer_quote_item + audit_log。
 	// version_no = MAX(version_no)+1（同客户内单调递增）。
@@ -364,6 +410,56 @@ func (s *Service) ListCustomers(ctx context.Context, scope OwnerScope, keyword s
 		return &CustomerListResult{List: []CustomerItem{}, Total: 0, Page: page, Size: size}, nil
 	}
 	return res, nil
+}
+
+// GetQuoteContext 返回 APPLY 当前价目表与 CLONE 历史报价的只读预览。
+func (s *Service) GetQuoteContext(ctx context.Context, customerID int64, scope OwnerScope, page, size int) (*QuoteContext, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if size <= 0 || size > 200 {
+		size = 20
+	}
+	found, inScope, err := s.store.CheckCustomerScope(ctx, customerID, scope)
+	if err != nil {
+		return nil, fmt.Errorf("check customer scope: %w", err)
+	}
+	if !found {
+		return nil, ErrCustomerNotFound
+	}
+	if !inScope {
+		return nil, ErrCustomerOutOfScope
+	}
+	levelCode, _, err := s.store.LoadCustomerLevel(ctx, customerID)
+	if err != nil {
+		return nil, err
+	}
+	contextView := &QuoteContext{CustomerID: customerID, LevelCode: levelCode}
+	bookID, versionNo, bookFound, err := s.store.LoadEffectivePriceBook(ctx, levelCode)
+	if err != nil {
+		return nil, err
+	}
+	if bookFound {
+		items, loadErr := s.store.LoadPriceBookItems(ctx, bookID)
+		if loadErr != nil {
+			return nil, loadErr
+		}
+		previewItems := make([]QuotePreviewItem, 0, len(items))
+		for _, item := range items {
+			previewItems = append(previewItems, QuotePreviewItem{SKUID: item.SKUID, SKUCode: item.SKUCode,
+				Currency: item.Currency, UnitPrice: item.UnitPrice.StringFixed(8)})
+		}
+		contextView.PriceBook = &PriceBookPreview{ID: bookID, LevelCode: levelCode, VersionNo: versionNo, Items: previewItems}
+	}
+	history, err := s.store.ListCustomerQuotePreviews(ctx, customerID, page, size)
+	if err != nil {
+		return nil, err
+	}
+	if history == nil {
+		history = &QuoteHistoryPage{List: []QuoteHistoryPreview{}, Page: page, Size: size}
+	}
+	contextView.History = *history
+	return contextView, nil
 }
 
 // TransferPreview 移交影响面（首次 confirm=false 调用）。

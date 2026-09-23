@@ -138,7 +138,10 @@ func TestExport_FormatUnsupported(t *testing.T) {
 
 func TestExport_Expired(t *testing.T) {
 	q := baseExportQuote()
-	past := time.Now().Add(-24 * time.Hour)
+	// valid_until 必须相对 fixedNow 派生，不能用 time.Now()：
+	// service 的过期判断是 svc.now()（= fixedNow，恒定 2026-09-16 12:00 UTC）与 valid_until 比较，
+	// 一旦真实时间走到 fixedNow 之后，"now()-24h" 就晚于 fixedNow，判断不再成立，测试必然失败。
+	past := fixedNow().Add(-24 * time.Hour)
 	q.ValidUntil = &past
 	f := &fakeExportStore{
 		quote: q,

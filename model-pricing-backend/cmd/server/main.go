@@ -35,6 +35,7 @@ import (
 	"model_bss/internal/domain/cost"
 	"model_bss/internal/domain/customer"
 	"model_bss/internal/domain/model"
+	"model_bss/internal/domain/openapi"
 	"model_bss/internal/domain/price"
 	"model_bss/internal/domain/pricing"
 	"model_bss/internal/domain/supplier"
@@ -100,6 +101,7 @@ func main() {
 	costLockSvc := cost.NewLockService(costSvc, repo.NewCostLockRepo(dbClient.DB), nil)
 	costCompareSvc := cost.NewCompareService(costSvc, costRepo)
 	costJobs := worker.NewCostJobRepo(dbClient.DB)
+	eventJobs := repo.NewEventJobRepo(dbClient.DB)
 
 	// 阶段 7a：官方价采集批次 + 暂存区（07-supplier-and-price-change.md §5/§6）。
 	priceSyncSvc := price.NewSyncService(repo.NewPriceSyncRepo(dbClient.DB), nil)
@@ -143,6 +145,10 @@ func main() {
 	alertSvc := workbench.NewAlertService(alertRepo, nil)
 	auditRepo := repo.NewWorkbenchAuditRepo(dbClient.DB)
 	auditSvc := workbench.NewAuditService(auditRepo)
+
+	// 阶段 11a：开放接口（11-open-api.md §1/§2）。
+	openApiRepo := repo.NewOpenApiRepo(dbClient.DB)
+	openApiSvc := openapi.NewService(openApiRepo, adaptCalcFunc(costSvc))
 
 	modelRepo := repo.NewModelRepo(dbClient.DB)
 	modelSvc := model.NewService(modelRepo)
@@ -190,6 +196,7 @@ func main() {
 		IdemStore:              repo.NewIdempotencyRepo(dbClient.DB),
 		ModelSvc:               modelSvc,
 		SupplierSvc:            supplier.NewService(repo.NewSupplierRepo(dbClient.DB)),
+		SupplierProfileSvc:     supplier.NewProfileService(repo.NewSupplierRepo(dbClient.DB)),
 		SupplierQuoteSvc:       quoteSvc,
 		SupplierImportSvc:      supplier.NewImportService(quoteSvc, repo.NewImportRepo(dbClient.DB)),
 		QuoteApproveSvc:        approveSvc,
@@ -211,6 +218,8 @@ func main() {
 		WorkbenchSvc:           workbenchSvc,
 		AlertSvc:               alertSvc,
 		AuditSvc:               auditSvc,
+		OpenApiSvc:             openApiSvc,
+		OpenTokenStore:         openApiRepo,
 	})
 
 	// worker 骨架（阶段 6a）：先注册任务，服务启动后 Start，优雅退出时
@@ -221,7 +230,7 @@ func main() {
 		loc = time.FixedZone("CST", 8*3600) // Asia/Shanghai 兜底
 	}
 	sched := worker.NewScheduler(worker.NewCronLocker(dbClient.DB), log, loc)
-	nJobs := worker.RegisterJobs(sched, cfg.Worker, approveSvc, lifecycleSvc, costSvc, costJobs)
+	nJobs := worker.RegisterJobs(sched, cfg.Worker, approveSvc, lifecycleSvc, costSvc, costJobs, eventJobs)
 	if cfg.Worker.Enable && nJobs > 0 {
 		sched.Start(context.Background())
 		log.Info("worker started", zap.Int("jobs", nJobs))
@@ -290,3 +299,55 @@ func (l *cacheLimiter) Get(key string) int {
 
 // Reset 登录成功后清零计数。
 func (l *cacheLimiter) Reset(key string) { l.c.Delete(key) }
+
+// adaptCalcFunc 把 cost.Service.CalcSKU 适配为 openapi.CalcFunc。
+// 开放接口的 CalcInput 与 cost.RecalcInput 同构，这里做字段级拷贝。
+func adaptCalcFunc(svc *cost.Service) openapi.CalcFunc {
+	return func(input *openapi.CalcInput, now time.Time) ([]openapi.SupplierScore, error) {
+		costInput := &cost.RecalcInput{
+			SKUID:    input.SKUID,
+			SKUCode:  input.SKUCode,
+			Currency: input.Currency,
+		}
+		// Quotes
+		costInput.Quotes = make([]cost.QuoteInput, 0, len(input.Quotes))
+		for _, q := range input.Quotes {
+			comps := make([]cost.QuoteComponentInput, 0, len(q.Components))
+			for _, c := range q.Components {
+				comps = append(comps, cost.QuoteComponentInput{ComponentType: c.ComponentType, UnitPrice: c.UnitPrice})
+			}
+			costInput.Quotes = append(costInput.Quotes, cost.QuoteInput{
+				SupplierID: q.SupplierID, QuoteSheetID: q.QuoteSheetID, QuoteVersion: q.QuoteVersion,
+				ValidFrom: q.ValidFrom, Currency: q.Currency, Constraints: q.Constraints,
+				Components: comps,
+			})
+		}
+		// Params
+		costInput.Params = make([]cost.Param, 0, len(input.Params))
+		for _, p := range input.Params {
+			costInput.Params = append(costInput.Params, cost.Param{
+				ScopeType: p.ScopeType, ScopeID: p.ScopeID,
+				LossRate: p.LossRate, ChannelRate: p.ChannelRate,
+			})
+		}
+		// Statuses
+		costInput.Statuses = make([]cost.SupplierStatus, 0, len(input.Statuses))
+		for _, st := range input.Statuses {
+			costInput.Statuses = append(costInput.Statuses, cost.SupplierStatus{
+				SupplierID: st.SupplierID, QualStatus: st.QualStatus, SettleStatus: st.SettleStatus, Status: st.Status,
+			})
+		}
+		res, err := svc.CalcSKU(costInput, now)
+		if err != nil {
+			return nil, err
+		}
+		// 从 SkuCalcResult.All 提取排序后的供应商得分
+		scores := make([]openapi.SupplierScore, 0, len(res.All))
+		for _, r := range res.All {
+			scores = append(scores, openapi.SupplierScore{
+				SupplierID: r.SupplierID, TotalScore: r.Scores.Total, RepresentCost: r.RepresentCost,
+			})
+		}
+		return scores, nil
+	}
+}
