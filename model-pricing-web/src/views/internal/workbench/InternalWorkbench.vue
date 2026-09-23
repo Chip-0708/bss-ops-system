@@ -2,7 +2,7 @@
 import { formatDateTime } from "../../../domain/date";
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { workbenchApi, type WorkbenchDTO, type WorkbenchMetricDTO, type WorkbenchTaskDTO } from "../../../api/workbench";
+import { workbenchApi, type WorkbenchDTO, type WorkbenchMetricDTO, type WorkbenchTaskDTO } from "../../../modules/workbench/api/workbench";
 import { ApiError } from "../../../domain/common";
 import { usePermissionStore } from "../../../stores/permission";
 import { useSessionStore } from "../../../stores/session";

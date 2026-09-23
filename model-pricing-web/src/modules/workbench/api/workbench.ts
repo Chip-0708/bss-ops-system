@@ -1,5 +1,5 @@
-import type { IsoDateTime } from "../domain/common";
-import { apiRequest } from "./http";
+import type { IsoDateTime } from "../../../domain/common";
+import { apiRequest } from "../../../api/http";
 
 export interface WorkbenchMetricDTO {
   id: string;

@@ -8,7 +8,7 @@ import { auditApi } from "../src/api/audit";
 import type { AuditLogDetailDTO } from "../src/api/audit.types";
 import { customerPortalApi } from "../src/api/customerPortal";
 import { customerQuotesApi } from "../src/api/customerQuotes";
-import { workbenchApi } from "../src/api/workbench";
+import { workbenchApi } from "../src/modules/workbench/api/workbench";
 import { useSessionStore } from "../src/stores/session";
 
 const entries = new Map<string, string>();

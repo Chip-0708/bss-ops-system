@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import type { WorkbenchDTO, WorkbenchMetricDTO, WorkbenchTaskDTO } from "../../api/workbench";
+import type { WorkbenchDTO, WorkbenchMetricDTO, WorkbenchTaskDTO } from "../../modules/workbench/api/workbench";
 import { ApiError } from "../../domain/common";
 
 const basePath = "/api/internal/workbench";
