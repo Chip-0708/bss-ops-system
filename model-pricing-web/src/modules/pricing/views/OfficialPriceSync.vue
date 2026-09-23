@@ -1,30 +1,30 @@
 <script setup lang="ts">
-import { formatDateTime } from "./domain/date";
+import { formatDateTime } from "../../../domain/date";
 import { computed, onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { officialPricesApi } from "./api/officialPrices";
-import { changeRequestsApi } from "./api/changeRequests";
-import type { ChangeRequestDetailDTO, ChangeRequestItemDTO, ChangeRequestType } from "./api/changeRequests.types";
-import { modelsApi } from "./api/models";
-import type { ModelSkuContractDTO } from "./api/models.types";
+import { officialPricesApi } from "../../../api/officialPrices";
+import { changeRequestsApi } from "../../../api/changeRequests";
+import type { ChangeRequestDetailDTO, ChangeRequestItemDTO, ChangeRequestType } from "../../../api/changeRequests.types";
+import { modelsApi } from "../../../api/models";
+import type { ModelSkuContractDTO } from "../../../api/models.types";
 import type {
   StagingItemInput,
   StagingPriceDTO,
   SyncJobDTO,
   SyncJobType,
-} from "./api/officialPrices.types";
-import { QUOTE_COMPONENTS } from "./api/quoteContract.types";
-import type { QuoteComponentType } from "./api/quoteContract.types";
-import { usePermissionStore } from "./stores/permission";
-import { PERMISSIONS } from "./domain/permissions";
-import { ApiError } from "./domain/common";
-import { isDecimalAmount } from "./domain/money";
+} from "../../../api/officialPrices.types";
+import { QUOTE_COMPONENTS } from "../../../api/quoteContract.types";
+import type { QuoteComponentType } from "../../../api/quoteContract.types";
+import { usePermissionStore } from "../../../stores/permission";
+import { PERMISSIONS } from "../../../domain/permissions";
+import { ApiError } from "../../../domain/common";
+import { isDecimalAmount } from "../../../domain/money";
 import {
   SYNC_JOB_STATUS,
   STAGING_DIFF_STATUS,
   type SyncJobStatus,
   type StagingDiffStatus,
-} from "./domain/status";
+} from "../../../domain/status";
 
 type TabName = "jobs" | "staging" | "confirmed";
 const permission = usePermissionStore();

@@ -1,8 +1,8 @@
 import type { RouteRecordRaw } from "vue-router";
 import AppLayout from "../layouts/AppLayout.vue";
-import Models from "../Models.vue";
+import Models from "../modules/models/views/Models.vue";
 import ModelApplicationReview from "../views/internal/models/ModelApplicationReview.vue";
-import Sync from "../Sync.vue";
+import Sync from "../modules/pricing/views/OfficialPriceSync.vue";
 import ModulePlaceholderView from "../views/ModulePlaceholderView.vue";
 import SupplierQuoteList from "../views/internal/supplierQuotes/SupplierQuoteList.vue";
 import AlertList from "../views/internal/alerts/AlertList.vue";

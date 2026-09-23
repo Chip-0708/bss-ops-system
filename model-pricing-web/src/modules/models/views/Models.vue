@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { modelsApi } from "./api/models";
-import { capabilityLabels, mockModelTypes, modelContractId, toModelListItem, validateModelSkuRequest } from "./api/models.catalog";
-import { ApiError } from "./domain/common";
-import { formatDateTime } from "./domain/date";
-import { MODEL_STATUS_LABELS as statuses, MODEL_VERIFY_STATUS_LABELS, getModelStatusType } from "./domain/status";
-import type { ModelStatus } from "./domain/status";
-import { usePermissionStore } from "./stores/permission";
-import { PERMISSIONS } from "./domain/permissions";
+import { modelsApi } from "../../../api/models";
+import { capabilityLabels, mockModelTypes, modelContractId, toModelListItem, validateModelSkuRequest } from "../../../api/models.catalog";
+import { ApiError } from "../../../domain/common";
+import { formatDateTime } from "../../../domain/date";
+import { MODEL_STATUS_LABELS as statuses, MODEL_VERIFY_STATUS_LABELS, getModelStatusType } from "../../../domain/status";
+import type { ModelStatus } from "../../../domain/status";
+import { usePermissionStore } from "../../../stores/permission";
+import { PERMISSIONS } from "../../../domain/permissions";
 import type {
   Model,
   ModelListItem,
@@ -20,7 +20,7 @@ import type {
   DeprecateModelResponseDTO,
   BatchResult,
   ModelSuggestionDTO,
-} from "./api/models.types";
+} from "../../../api/models.types";
 
 const permissions = usePermissionStore();
 const canPublish = computed(() => permissions.canAction(PERMISSIONS.MODEL_EDIT));
