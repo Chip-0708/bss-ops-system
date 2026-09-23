@@ -56,12 +56,6 @@ export interface Retirement {
   offlineAt: string;
   reason: string;
 }
-export interface BatchResult {
-  id: string;
-  code: string;
-  ok: boolean;
-  reason: string;
-}
 export interface Request {
   method: "GET" | "POST" | "PUT";
   path: string;

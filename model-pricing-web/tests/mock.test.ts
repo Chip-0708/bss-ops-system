@@ -5,9 +5,9 @@ import type {
   Model,
   Impact,
   Retirement,
-  BatchResult,
   Role,
 } from "../src/types.ts";
+import type { BatchResult } from "../src/api/models.types.ts";
 const base = "/api/internal/models";
 test("GET cannot mutate state", () => {
   const db = createMock();
