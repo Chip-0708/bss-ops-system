@@ -38,20 +38,6 @@ export interface Model {
   margin?: string;
   pendingRetirement?: boolean;
 }
-export type Draft = Pick<
-  Model,
-  | "code"
-  | "name"
-  | "vendor"
-  | "family"
-  | "type"
-  | "context"
-  | "capabilities"
-  | "protocol"
-  | "tier"
-  | "sensitive"
-  | "crossBorder"
->;
 export interface Impact {
   id: string;
   modelId: string;

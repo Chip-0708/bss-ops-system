@@ -1,9 +1,9 @@
 import { ApiError, statuses } from "./types.ts";
 import { createOperations } from './operations.ts';
 import { modelSku, modelWriteFields } from "./mocks/data/modelCatalog.ts";
+import type { Draft } from "./api/models.types.ts";
 import type {
   Model,
-  Draft,
   Impact,
   Retirement,
   BatchResult,
