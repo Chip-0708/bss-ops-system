@@ -6,7 +6,7 @@
 
 **技术栈**：Go 1.22（Gin + GORM + pgx）｜PostgreSQL 15｜Vue 3 + Element Plus｜uni-app（H5/小程序）｜Redis 7（可选，仅验证码与限次）｜golang-migrate
 
-> **当前环境（用户告知，待配置核验）**：后端开发以 `model-pricing-backend-integration` 为准，当前连接的是测试数据库。投入生产前必须将数据库连接配置切换为生产环境配置，并核验实际连接目标；不得将当前测试数据库配置直接用于生产。此条不授权自动切换、迁移或操作生产数据库。
+> **正式代码基线**：后端开发以当前聚合仓库 `bss-ops-system/model-pricing-backend` 为准。该目录已同步后端 integration commit `1e15eb56e1413e7df39f8fbf5d97a9f1ad377a01`；无需再到其他 worktree 获取代码。连接任何环境前必须核验实际配置和数据库目标，不得将测试配置直接用于生产。此条不授权自动切换、迁移或操作生产数据库。
 
 ---
 
@@ -157,9 +157,8 @@ docs/api/            【可写】**接口契约目录**：前端对接的唯一�
 ## 九、当前进度
 
 > **⚠️ 登记纪律（所有 agent 必须遵守）**：本文件有 **40k 字符上限**（claude CLI 超过会截断）。
-> 完成一个阶段后，**详细日志（每批 E2E 实测值、变异验证 logs、完整手工改数声明）一律写进
-> `CLAUDE-history.md`**；本文件只留：**速览行（3~8 行，含 commit hash + 接口清单 + 关键裁决 +
-> 单测/变异条数）+ 遗留编号**（如 `9b-①..⑨`，细节在 history）。
+> 完成一个阶段后，本文件只保留：**速览行（3~8 行，含 commit hash + 接口清单 + 关键裁决 +
+> 单测/变异条数）+ 遗留编号**（如 `9b-①..⑨`）。详细实现与验证证据以 Git 提交、测试和现有项目文档为准，交接状态统一维护在仓库根目录 `HANDOVER.md`。
 > 违反 = 下一个 agent 的上下文被截断，等于任务失败。
 >
 > **⚠️ 手工改库声明标准（9c 复核教训）**：手工改库**每一次执行都要列入声明**（同一语句重复 N 次
@@ -169,11 +168,9 @@ docs/api/            【可写】**接口契约目录**：前端对接的唯一�
 > ① fixture（INSERT 测试账号/数据）② 测试准备（UPDATE 状态到可测值）③ 测试清理（DELETE 残留）
 > ④ 重跑重置（把状态改回起点）⑤ 临时改配置/参数。
 >
-> **2026-09-17 两次瘦身记录**：原 77.7k → 归档阶段 0~7 后 35.2k → 9a 登记后又涨到 43.3k
-> → 再归档 8 系列 + 9b 后 **23.7k** → 9c 后 **25.9k**。回查原始断言请按阶段编号
-> （如「6d-3」「7b-②」「8b-2 详细」「9c 声明⑤」）在 `CLAUDE-history.md` 内搜索。
+> 历史实现与验证细节以 Git 提交和现有项目文档为准；不要继续向本文件追加大段过程日志。
 
-### 9.0 已完成阶段速览（阶段 0~7，详见 CLAUDE-history.md）
+### 9.0 已完成阶段速览（阶段 0~7）
 
 | 阶段 | 内容 | 锚点 |
 | --- | --- | --- |
@@ -187,13 +184,13 @@ docs/api/            【可写】**接口契约目录**：前端对接的唯一�
 | 7 | 官方价变更（采集/暂存/比对 + 确认/审批/生效连锁） | 39eed7f / a4b391a / 079b33a / 4605b7c |
 | 7b+ | 复核收尾（倍率静默跟随重算真库锚点） | 2196f3b |
 
-### 9.0.1 全量遗留索引（阶段 F 统一治理，**编号与 history 里的原条目对应**）
+### 9.0.1 全量遗留索引（阶段 F 统一治理）
 
 **机制类（影响实现）**：
 - **幂等中间件 `FindByBizKey` 命中后不区分 DONE/PROCESSING 直接 409**；且 `MarkResult` 未挂 SetIdempotencyResult 时 result_json=NULL → 重放 data:null（6d-2/6d-3/8a/8b-1 都踩到）——**阶段 10 治理**
 - **预约生效**：5b、7b-①、8b-1-⑥ 三处都不支持 `effective_time > now`（统一等 worker 分钟级 ticker）
 - **DecideApproval 非事务**：连锁失败留 APPROVED-without-effects 脏态（7b-②，修复方向=包事务或可重试）
-- **报价预约 ticker's LIMIT 1 脏数据**：`ui_activate_quote_scan` 用 `ORDER BY … LIMIT 1` 导致任一张留痕（history 阶段 6 遗留），非瓶颈可后做
+- **报价预约 ticker's LIMIT 1 脏数据**：`ui_activate_quote_scan` 用 `ORDER BY … LIMIT 1` 导致任一张留痕，非瓶颈可后做
 - **`representCompJoin` 改 `LEFT JOIN LATERAL`**（6b-4 遗留②）：当前用 LEFT JOIN，结构正确但非最优
 
 **数据一致性类（阶段 F 治理清单）**：
@@ -204,7 +201,7 @@ docs/api/            【可写】**接口契约目录**：前端对接的唯一�
 
 **权限类（并入阶段 F「角色权限过宽」专项）**：
 - `M5:E` 被 6 角色持有（PRICING_OP/PROCUREMENT/FINANCE/MODEL_OPS/RETRO_OP/SALES），仅 PRICING/PROCUREMENT 应有
-- `M4:A`/`M4:P` M4:P 发到了 PROCUREMENT（buyer_a 误批准 evidence 在 history 阶段 5b）
+- `M4:A`/`M4:P` M4:P 发到了 PROCUREMENT（阶段 5b 曾出现 buyer_a 误批准证据）
 - `M7:A` M7:P 两个价格目表权限点可能用处与真实审批错位（8b-1-B2）
 - `M2:V` 发给了 SALES（官方价暂存区对销售可见，非成本机密，留 F 复审）
 - `M10` 全权限给了 FINANCE（工作台/审计只读即可，F 复审）
@@ -249,11 +246,11 @@ docs/api/            【可写】**接口契约目录**：前端对接的唯一�
 ---
 
 - [ ] 8 定价与价目表 E
-  - [x] 8a 定价策略 + 生成价目表草稿（§1/§2）— commit 56cbde5（速览：4 接口 GET/POST/PUT /pricing/policies + POST /price-books；4 种 price_method[MARGIN/COST_UP/OFFICIAL_ANCHOR/FIXED]；命中 ALL/VENDOR/FAMILY/SKU + priority 最小优先；单测 24 条 + 变异 4 处；详细日志见 history）
+  - [x] 8a 定价策略 + 生成价目表草稿（§1/§2）— commit 56cbde5（速览：4 接口 GET/POST/PUT /pricing/policies + POST /price-books；4 种 price_method[MARGIN/COST_UP/OFFICIAL_ANCHOR/FIXED]；命中 ALL/VENDOR/FAMILY/SKU + priority 最小优先；单测 24 条 + 变异 4 处）
         遗留 8a-①..⑨（rounding_rule 只落值未实现取整 / TIERED 不在 DDL / baseline_version 是版本号 / 优先级不叠加 / MODEL_TYPE 不支持 / floor_rule 无此列 / 契约字段名待更新 / component 只落代表组件 / result_json NULL 同根）
-  - [x] 8b-1 发布价目表 + 回滚（§3/§4）— commit 612ae4c（速览：2 接口 publish/rollback；A1 sku_id DROP NOT NULL[000021]；A2 状态机 DRAFT/APPROVING/EFFECTIVE/RETIRED；A3 原地升格 version_no 不变；双人审批 PRICING_OP→FINANCE；单测 17 条 + 变异 3 处；详细日志见 history）
+  - [x] 8b-1 发布价目表 + 回滚（§3/§4）— commit 612ae4c（速览：2 接口 publish/rollback；A1 sku_id DROP NOT NULL[000021]；A2 状态机 DRAFT/APPROVING/EFFECTIVE/RETIRED；A3 原地升格 version_no 不变；双人审批 PRICING_OP→FINANCE；单测 17 条 + 变异 3 处）
         遗留 8b-1-①..⑨（change_type 新枚举待更新注释 / M7:A 权限点定位 / floor_violation bool vs 三态 / GRAY 不支持 / SCHEDULED ticker / 驳回回 DRAFT 待确认 / created_by 前缀风格 / result_json NULL 同根）
-  - [x] 8b-2 涨价传导决策队列（§5）— commit 02dfd68（速览：3 接口 list/generate/decide；migration 000022 price_upconduction；等比调整 sug=cur×(1+delta)；floor 护栏 NOT_FOLLOW 409；冻结期 7 天；单测 14 条 + 变异 3 处；**新坑位表：GORM embedded 行 + 别名列扫描不上**；详细日志见 history）
+  - [x] 8b-2 涨价传导决策队列（§5）— commit 02dfd68（速览：3 接口 list/generate/decide；migration 000022 price_upconduction；等比调整 sug=cur×(1+delta)；floor 护栏 NOT_FOLLOW 409；冻结期 7 天；单测 14 条 + 变异 3 处；**新坑位表：GORM embedded 行 + 别名列扫描不上**）
         遗留 8b-2-①..⑧（自动生成待 worker / FOLLOW 不自动发布 / price_suggested 算法 / margin mask / 冻结期可配 / operator_role 用 Roles[0] / result_json NULL 同根 / 11 条存量 lint 已清）
   - [ ] 8b-3（待排期）：价目表详情/历史/对比等只读接口
 - [x] 9a 客户列表 + 生成报价 — commit 88bbd28
@@ -292,9 +289,8 @@ docs/api/            【可写】**接口契约目录**：前端对接的唯一�
       手工改库声明：tmp/9c-fixture-customer-account.sql + 9c-fixture-notifications.sql（fixture 保留）；
       UPDATE quote id=2 → APPROVED（E2E 后保留为 EFFECTIVE）；INSERT+DELETE 临时 customer_id=2 报价（已清）；
       **重跑清理 3 次**（DELETE cpb id=1/2/3 + UPDATE quote id=2 → DRAFT，E2E 脚本 3 个自身 bug 中断重跑所致，
-      audit 125~127 无对应 cpb——复核补全，详见 history 9c 节声明⑤）。
+      audit 125~127 无对应 cpb——复核补全）。
       遗留 9c-①..⑤（bills 占位待计费系统 / 通知标记已读接口未做 / accept 立即转合同无内部确认 / home 单接口未拆并行 / 通知不自动生成）。
-      详细日志见 CLAUDE-history.md 9c 节。
 - [ ] 10 工作台与审计 F
   - [x] 10a 待办聚合 + 指标卡 — commit 27353ed
         2 接口：GET /api/internal/workbench/todos（行级过滤+去重+deeplink）+ GET /api/internal/workbench/metrics（按角色裁剪卡片）。
@@ -306,7 +302,6 @@ docs/api/            【可写】**接口契约目录**：前端对接的唯一�
         E2E：smoke_admin todos OPEN total=6 list_len=5（去重后）；buyer_a PROCUREMENT 4 卡；smoke_finance FINANCE 2 卡；smoke_sales SALES 3 卡；DTO 无成本字段；未认证 401。
         手工改库声明：无（只读接口，无 fixture）。
         遗留 10a-①..⑤（指标卡缓存/季度成交额占位/破 floor 口径/权限点定义/汇率锁定占位）。
-        详细日志见 CLAUDE-history.md 10a 节。
   - [x] 10b 告警处理 + 审计日志查询导出 — commit 3d9642c
         4 接口：GET /alerts（M12:V，severity/status/alert_type 筛选）+ POST /alerts（M12:E+幂等，HANDLE/RESOLVE/IGNORE/TO_TICKET 状态机，终态 409，TO_TICKET 建 todo_task）+ GET /audit-logs（M12:V，多维查询 + operator_name 解析）+ GET /audit-logs/export（M12:V，CSV UTF-8 BOM / XLSX，上限 10000 行）。
         权限裁决 1：契约 F:V/F:E → M12:V/M12:E（M12 是工作台/审计模块）。
@@ -317,7 +312,6 @@ docs/api/            【可写】**接口契约目录**：前端对接的唯一�
         E2E：GET /alerts?status=OPEN → 9 行；severity=CRITICAL → 4 行；alert_type=QUOTE_ANOMALY → 2 行；POST HANDLE alert_id=1 → 200 HANDLING；POST RESOLVE alert_id=2 create_todo=true → 200 RESOLVED + todo_id=28；重复处理 → 409；GET /audit-logs?page=1&size=5 → 5 行（operator_name 非空）；action=CUSTOMER_QUOTE_ACCEPTED → 4 行；export csv → 200 22666B；export xlsx → 200 15188B；缺 from → 400；未认证 → 401。
         手工改库声明：无（业务接口变更，非手工 SQL）。
         遗留 10b-①..⑤（契约 F:V/F:E→M12:V/M12:E 文档修正 / operator_id 命名空间冲突治理 / todo_task.biz_type='ALERT' 新枚举 DDL 注释 / todo 指派他人未实现 / 导出 10000 上限 + 保留策略待定）。
-        详细日志见 CLAUDE-history.md 10b 节。
   - [x] 10c audit_log operator_id 拆两列 + 回填 — commit 7090353
         迁移 000025：ALTER TABLE audit_log ADD COLUMN internal_operator_id + subject_operator_id；回填按 operator_role 分派（内部角色 → internal_operator_id，外部角色 → subject_operator_id，SYSTEM/operator_id=0 → 两列 NULL）；operator_id 保留（冗余字段，向后兼容）。
         写侧：AuditRepo.Record 按 operator_role 分派两列；读侧：operator_name 解析先查两列（不靠 role 白名单）。
@@ -326,7 +320,6 @@ docs/api/            【可写】**接口契约目录**：前端对接的唯一�
         E2E：迁移前 81 行 → 迁移后 81 行（schema 变更不写数据）；回填 PLATFORM_ADMIN 20 行 internal_operator_id=20，CUSTOMER 4 行 subject_operator_id=4，SYSTEM 14 行两列 NULL；accept quote id=3 → audit_log id=133：operator_id=1, operator_role=CUSTOMER, internal_operator_id=NULL, subject_operator_id=1；GET /audit-logs → operator_name 从两列解析。
         手工改库声明：UPDATE customer_quote SET status='APPROVED' WHERE id=3（E2E 测试准备，1 次）。
         遗留 10c-①..④（qual-expire-scan 无数据源 / operator_id 撞号未完美解决 / todo_task.biz_type='ALERT' DDL 注释 / operator_role 冗余字符串治理）。
-        详细日志见 CLAUDE-history.md 10c 节。
   - [ ] 10d 工作台 worker ticker
 - [x] 11a 开放接口 7 个接口 — commit dd186a0
       7 接口：POST /api/open/auth/token（client_id+secret 换 1h token，sys_config 配置）+ GET /aliases（since 版本过滤）+ GET /sellable-models（PUBLISHED/PURCHASABLE）+ GET /routing/{sku}（primary=成本基线主供应商，backups=四因子排序）+ GET /price-book?level=（当前生效价目表）+ GET /cost-snapshot?sku=&asOf=（聚合 unit_cost）+ GET /events?since=&limit=（30s 长轮询）。
@@ -337,7 +330,6 @@ docs/api/            【可写】**接口契约目录**：前端对接的唯一�
       E2E：token 200/401、aliases 3 items/since=1 空、sellable-models 5 items、routing/40 primary=2 backups=1、price-book GLOBAL 2 items、cost-snapshot sku=40 unit_cost=3.00000000、events since=0 31 events、无 token 401、过期 token 401。
       手工改库声明：① INSERT sys_config open_api.client_id/client_secret（fixture）② INSERT cache_version model_alias=1（fixture）③ UPDATE open_api_token expires_at=now()-1h（E2E 过期测试，事后恢复）。
       遗留 11a-①..⑤（aliases 增量不可行 / 长轮询最大连接数未做 / level_tags 来源未定 / token TTL 硬编码 / routing 无评分明细）。
-      详细日志见 CLAUDE-history.md 11a 节。
 - [x] 11b 事件推送 worker — commit 2d36496
       EventJobRepo（PollDue/Claim/MarkDone/MarkFailed/MarkDead/ResetStaleRunning）+ DeliverClient（HTTP POST + X-Event-Signature）+ EventDeliverJob（启动复位 + 认领 + 推送 + 退避）。
       退避 1min×5^(n-1)，第 5 次 DEAD + alert(EVENT_DELIVERY_FAILED, CRITICAL)。
@@ -346,7 +338,6 @@ docs/api/            【可写】**接口契约目录**：前端对接的唯一�
       E2E：31 条 PENDING 全部 DONE；5 条 FAILED + retry_count=1；id=8 retry_count=4 → DEAD + alert id=10。
       手工改库声明：① INSERT sys_config webhook_url/secret（fixture）② UPDATE event_outbox 5 条 PENDING（E2E 准备）③ UPDATE id=8 retry_count=4（DEAD 测试）④ 清理 sys_config/event_outbox/alert。
       遗留 11b-①..⑤（model.published/deprecated/quote.approved 事件产生未写 / 多 webhook 路由未做 / 签名验证消费者侧未做 / webhook_secret 保存策略待确认 / 历史 31 行已清）。
-      详细日志见 CLAUDE-history.md 11b 节。
 - [ ] 11c MCP Server
 
 （每完成一项，在此勾选并注明提交信息）
