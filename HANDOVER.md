@@ -298,12 +298,30 @@ D:\Codex\workspaces\实习\projects\bss-ops-system
 
 ```text
 branch: feature/model-pricing
-HEAD:   95cdf4606bca50f22cd01665ce5ec5c7dea8974d
+HEAD:   d673609
+remote: origin/feature/model-pricing
+```
+
+当前本地分支已经与远端同步：
+
+```text
+HEAD -> feature/model-pricing
+origin/feature/model-pricing -> d673609
+```
+
+当前工作区状态：
+
+```text
+nothing to commit, working tree clean
+stash: empty
 ```
 
 最近重要提交：
 
 ```text
+d673609 docs: clean up backend agent guidance
+0dff4ed docs: add BSS project handover guide
+97936b4 chore: sync latest backend integration baseline
 95cdf46 refactor(web): reuse shared batch result type
 8bd98a9 refactor(web): reuse shared model draft type
 8dde83b refactor(web): move workbench api into business module
@@ -319,11 +337,12 @@ b6b9613 chore: remove unused legacy api entries
 feat: add supplier profiles and quote acceptance safeguards
 ```
 
-同步内容已经通过逐文件 Git tree 校验，但尚未提交到聚合仓库。因此当前 HEAD 本身仍不包含这次后端同步；交接前应将后端同步和本文件作为清晰、可审查的提交处理。
+相关后端同步内容已经整理并提交到聚合仓库，当前 `feature/model-pricing` 分支已包含最新前后端代码、后端集成基线以及交接文档。
 
-当前本地分支相对 `origin/feature/model-pricing` 领先 4 个既有提交，尚未全部推送。当前未提交修改集中在同步后的 `model-pricing-backend` 和本交接文档，`model-pricing-web` 没有意外修改。
+当前本地分支与 `origin/feature/model-pricing` 保持同步，工作区无未提交修改，也不存在未处理的 stash。
 
-接手人不需要再到其他 integration worktree 获取后端代码；完成提交后的本聚合仓库应作为唯一交接基线。
+接手人不需要再到其他 integration worktree 获取后端代码；当前 `bss-ops-system` 仓库的 `feature/model-pricing` 分支可作为最终交接基线。
+
 
 ## 12. 接手建议
 
